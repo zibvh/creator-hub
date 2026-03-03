@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CreatorHub — Dashboard</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;900&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ══════════════════════════════════════
+       CSS VARIABLES & RESET
+    ══════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg0: #0A0806;
+      --bg1: #120E09;
+      --bg2: #1A130C;
+      --bg3: #231810;
+      --bg4: #2E1F13;
+      --border: #2A1E14;
+      --border2: #3D2D1C;
+      --t1: #F2E8D5;
+      --t2: #A88B6A;
+      --t3: #6B5240;
+      --brown: #C4813A;
+      --brown2: #D4956A;
+      --amber: #F0A500;
+      --amber2: #FFB830;
+      --success: #52D98A;
+      --danger: #F07070;
+      --info: #5BA8F0;
+    }
+
+    html, body {
+      height: 100%; min-height: 100vh; width: 100%;
+      font-family: 'Sora', sans-serif;
+      background: var(--bg0);
+      color: var(--t1);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+    .display { font-family: 'Playfair Display', serif; }
+
+    /* ══════════════════════════════════════
+       ANIMATIONS
+    ══════════════════════════════════════ */
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideUp  { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    @keyframes slideIn  { from { transform:translateX(-100%); } to { transform:translateX(0); } }
+    @keyframes glowPulse{ 0%,100%{ box-shadow:0 0 20px rgba(240,165,0,0.15); } 50%{ box-shadow:0 0 40px rgba(240,165,0,0.45); } }
+    @keyframes spin     { to { transform:rotate(360deg); } }
+    @keyframes shimmer  { 0%{background-position:-200% center} 100%{background-position:200% center} }
+
+    .fade-up  { animation: fadeUp  0.38s cubic-bezier(.22,.68,0,1.2) both; }
+    .slide-up { animation: slideUp 0.32s cubic-bezier(.32,.72,0,1) both; }
+
+    /* ══════════════════════════════════════
+       LAYOUT
+    ══════════════════════════════════════ */
+    #app { min-height: 100vh; display: flex; }
+
+    /* Sidebar */
+    #sidebar {
+      width: 232px; min-height: 100vh;
+      background: var(--bg1); border-right: 1px solid var(--border);
+      padding: 18px 10px; display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 8px 22px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .logo-text { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; }
+
+    .section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--t3);
+      padding: 0 8px; margin-bottom: 6px;
+    }
+
+    nav { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 10px; cursor: pointer;
+      color: var(--t2); font-size: 13px; font-weight: 500;
+      transition: all 0.2s; border: 1px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--bg3); color: var(--t1); }
+    .nav-item.active {
+      background: rgba(196,129,58,0.12); color: var(--brown2);
+      border-color: rgba(196,129,58,0.25);
+    }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge {
+      background: var(--amber); color: #0A0806;
+      border-radius: 100px; padding: 1px 7px;
+      font-size: 10px; font-weight: 700; margin-left: auto;
+    }
+
+    /* Streak widget */
+    .streak-widget {
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 13px; padding: 12px 14px; margin-bottom: 14px;
+      animation: glowPulse 3s ease infinite;
+    }
+    .streak-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .streak-num { color: var(--amber); font-weight: 700; font-size: 15px; }
+    .streak-bar-bg { background: var(--border); border-radius: 4px; height: 4px; }
+    .streak-bar-fill {
+      background: linear-gradient(90deg, var(--brown), var(--amber));
+      height: 100%; border-radius: 4px; transition: width 0.6s ease;
+    }
+    .streak-hint { color: var(--t3); font-size: 10px; margin-top: 5px; }
+
+    /* Sidebar user */
+    .sidebar-user {
+      display: flex; align-items: center; gap: 9px;
+      padding: 12px 8px 4px; border-top: 1px solid var(--border);
+    }
+    .user-avatar {
+      width: 33px; height: 33px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; color: #0A0806;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-plan { font-size: 10px; color: var(--t3); }
+    .logout-btn {
+      background: none; border: none; color: var(--t3); cursor: pointer;
+      font-size: 18px; padding: 4px; transition: color 0.2s; line-height: 1;
+    }
+    .logout-btn:hover { color: var(--danger); }
+
+    /* Main content */
+    #main {
+      flex: 1; padding: 28px; overflow-y: auto;
+      max-width: calc(100vw - 232px);
+    }
+
+    /* ══════════════════════════════════════
+       MOBILE HEADER
+    ══════════════════════════════════════ */
+    #mobile-header {
+      display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 80;
+      background: rgba(18,14,9,0.95); border-bottom: 1px solid var(--border2);
+      padding: 13px 16px; align-items: center; justify-content: space-between;
+      backdrop-filter: blur(20px);
+    }
+    .mobile-logo { display: flex; align-items: center; gap: 8px; }
+    .mobile-logo-icon {
+      width: 26px; height: 26px; border-radius: 7px;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .mobile-page-title { font-family: 'Playfair Display', serif; font-size: 16px; }
+    #menu-btn, #close-drawer-btn {
+      background: var(--bg3); border: 1px solid var(--border); color: var(--t2);
+      width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 17px;
+    }
+
+    /* ══════════════════════════════════════
+       MOBILE DRAWER
+    ══════════════════════════════════════ */
+    #drawer-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+      width: 100vw; height: 100vh;
+    }
+    #drawer {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 101;
+      background: var(--bg1); border-right: 1px solid var(--border2);
+      display: flex; flex-direction: column; overflow-y: auto;
+      animation: slideIn 0.28s cubic-bezier(.32,.72,0,1) both;
+    }
+    .drawer-header {
+      padding: 18px 14px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .drawer-user {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg2); border-radius: 12px; padding: 10px 12px; margin: 12px;
+    }
+    .drawer-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 17px; color: #0A0806; flex-shrink: 0;
+    }
+    #drawer nav { padding: 6px 10px; flex: 1; }
+    .drawer-bottom { padding: 12px; border-top: 1px solid var(--border); }
+
+    /* ══════════════════════════════════════
+       BOTTOM NAV (MOBILE)
+    ══════════════════════════════════════ */
+    #bottom-nav {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+      background: rgba(18,14,9,0.97); border-top: 1px solid var(--border2);
+      backdrop-filter: blur(20px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .bnav-inner { display: flex; }
+    .bnav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 3px; padding: 10px 4px; cursor: pointer;
+      color: var(--t3); font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+      text-transform: uppercase; transition: color 0.2s; position: relative;
+      border: none; background: none; font-family: 'Sora', sans-serif;
+    }
+    .bnav-item.active { color: var(--amber); }
+    .bnav-item.active::before {
+      content: ''; position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%); width: 28px; height: 2px;
+      background: linear-gradient(90deg, var(--brown), var(--amber));
+      border-radius: 0 0 3px 3px;
+    }
+    .bnav-icon { font-size: 21px; line-height: 1; }
+
+    /* FAB */
+    #fab {
+      display: none; position: fixed; right: 16px; bottom: 74px; z-index: 70;
+      width: 52px; height: 52px; border-radius: 15px;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      border: none; cursor: pointer; font-size: 24px; color: #0A0806;
+      box-shadow: 0 8px 28px rgba(196,129,58,0.45);
+      transition: transform 0.18s;
+    }
+    #fab:active { transform: scale(0.92); }
+
+    /* ══════════════════════════════════════
+       VIEWS
+    ══════════════════════════════════════ */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ══════════════════════════════════════
+       COMMON COMPONENTS
+    ══════════════════════════════════════ */
+
+    /* Cards */
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 18px; padding: 20px; transition: border-color 0.22s;
+    }
+    .card:hover { border-color: var(--border2); }
+
+    /* Grids */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+    .gcol { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 10px; font-family: 'Sora', sans-serif;
+      font-weight: 600; font-size: 13px; cursor: pointer;
+      transition: all 0.18s; border: none; letter-spacing: 0.2px;
+    }
+    .btn-p {
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      color: #0A0806; padding: 10px 18px;
+    }
+    .btn-p:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-g {
+      background: transparent; color: var(--t2);
+      border: 1px solid var(--border2); padding: 9px 16px;
+    }
+    .btn-g:hover { border-color: var(--brown); color: var(--brown2); }
+    .btn-sm { padding: 7px 13px; font-size: 12px; }
+    .btn-icon {
+      background: var(--bg3); border: 1px solid var(--border); color: var(--t2);
+      width: 34px; height: 34px; border-radius: 9px; justify-content: center;
+    }
+
+    /* Inputs */
+    input[type=text], input[type=email], input[type=password],
+    input[type=date], input[type=time], textarea, select {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--t1);
+      font-family: 'Sora', sans-serif; font-size: 13px;
+      padding: 10px 14px; outline: none; width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--brown); }
+    input::placeholder, textarea::placeholder { color: var(--t3); }
+    select option { background: var(--bg3); }
+    label.field-label { display: block; font-size: 11px; color: var(--t3); margin-bottom: 5px; font-weight: 500; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 100px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+    .b-amber  { background: rgba(240,165,0,0.15);   color: var(--amber);   border: 1px solid rgba(240,165,0,0.3); }
+    .b-brown  { background: rgba(196,129,58,0.15);  color: var(--brown2);  border: 1px solid rgba(196,129,58,0.3); }
+    .b-green  { background: rgba(82,217,138,0.12);  color: var(--success); border: 1px solid rgba(82,217,138,0.3); }
+    .b-red    { background: rgba(240,112,112,0.12); color: var(--danger);  border: 1px solid rgba(240,112,112,0.3); }
+
+    /* Stat number */
+    .stat-num {
+      font-family: 'Playfair Display', serif; font-weight: 900;
+      background: linear-gradient(135deg, var(--t1) 30%, var(--brown2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; line-height: 1;
+    }
+
+    /* Section header */
+    .section-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-head h3 { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+    /* Toggle switch */
+    .toggle {
+      width: 42px; height: 23px; border-radius: 12px; cursor: pointer;
+      position: relative; border: none; transition: background 0.25s; flex-shrink: 0;
+    }
+    .toggle::after {
+      content: ''; position: absolute; width: 17px; height: 17px;
+      border-radius: 50%; background: #fff; top: 3px; transition: left 0.25s;
+    }
+    .toggle.on  { background: var(--brown); }
+    .toggle.on::after  { left: 22px; }
+    .toggle.off { background: var(--border2); }
+    .toggle.off::after { left: 3px; }
+
+    /* ══════════════════════════════════════
+       AUTH SCREEN
+    ══════════════════════════════════════ */
+    #auth-screen {
+      width: 100vw; height: 100vh; min-height: 100vh;
+      display: flex; align-items: center;
+      justify-content: center; padding: 20px;
+      position: fixed; top: 0; left: 0;
+      overflow-y: auto; overflow-x: hidden;
+      background: var(--bg0);
+    }
+    .auth-glow {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 70% 40% at 50% -5%, rgba(196,129,58,0.14) 0%, transparent 70%);
+    }
+    .auth-blob1 {
+      position: fixed; bottom: 10%; right: 5%; width: 280px; height: 280px;
+      border-radius: 50%; background: rgba(240,165,0,0.04); filter: blur(60px); pointer-events: none;
+    }
+    .auth-box { width: 100%; max-width: 400px; position: relative; z-index: 1; }
+    .auth-logo { text-align: center; margin-bottom: 34px; }
+    .auth-logo-row { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .auth-logo-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      box-shadow: 0 8px 24px rgba(196,129,58,0.3);
+    }
+    .auth-logo-text {
+      font-family: 'Playfair Display', serif; font-size: 27px;
+      background: linear-gradient(135deg, var(--t1), var(--brown2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .auth-subtitle { color: var(--t3); font-size: 13px; }
+    .auth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 28px; }
+    .auth-tabs { display: flex; background: var(--bg3); padding: 4px; border-radius: 10px; margin-bottom: 22px; }
+    .auth-tab {
+      flex: 1; padding: 8px; border: none; border-radius: 8px; cursor: pointer;
+      font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+      transition: all 0.2s; background: transparent; color: var(--t3);
+    }
+    .auth-tab.active { background: var(--brown); color: #0A0806; }
+    .auth-error {
+      background: rgba(240,112,112,0.12); border: 1px solid rgba(240,112,112,0.3);
+      border-radius: 9px; padding: 9px 13px; margin-bottom: 14px;
+      color: var(--danger); font-size: 12px; display: none;
+    }
+    .auth-form { display: flex; flex-direction: column; gap: 11px; }
+    .auth-row { display: flex; justify-content: space-between; align-items: center; margin: 13px 0; }
+    .remember-label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 12px; color: var(--t2); }
+    .forgot-btn { background: none; border: none; color: var(--brown2); cursor: pointer; font-size: 12px; font-family: 'Sora', sans-serif; }
+    .auth-submit { width: 100%; justify-content: center; padding: 12px; font-size: 14px; }
+    .auth-tos { text-align: center; color: var(--t3); font-size: 11px; margin-top: 13px; line-height: 1.6; }
+    .auth-reset-sent { text-align: center; padding: 24px 0; }
+
+    /* ══════════════════════════════════════
+       DASHBOARD VIEW
+    ══════════════════════════════════════ */
+    .view-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-wrap: wrap; gap: 14px; margin-bottom: 22px;
+    }
+    .view-title { font-family: 'Playfair Display', serif; font-size: 26px; margin-bottom: 3px; }
+    .view-sub   { color: var(--t3); font-size: 13px; }
+    .view-actions { display: flex; gap: 8px; }
+
+    /* Stat cards */
+    .stat-card { position: relative; overflow: hidden; }
+    .stat-card-bg {
+      position: absolute; top: -10px; right: -10px;
+      width: 80px; height: 80px; border-radius: 0 18px 0 80px;
+      opacity: 0.06; font-size: 52px; display: flex; align-items: center; justify-content: center;
+    }
+    .stat-icon  { font-size: 22px; margin-bottom: 10px; }
+    .stat-value { font-size: 26px; margin-bottom: 5px; }
+    .stat-label { color: var(--t2); font-size: 12px; margin-bottom: 8px; }
+
+    /* Chart cards */
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* Best times */
+    .time-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .time-label { color: var(--t3); font-size: 12px; width: 34px; flex-shrink: 0; }
+    .time-bar-bg { flex: 1; background: var(--bg3); border-radius: 4px; height: 7px; overflow: hidden; }
+    .time-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+
+    /* Badges grid */
+    .badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .badge-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px; text-align: center;
+    }
+    .badge-card.locked { border-style: dashed; border-color: var(--border2); opacity: 0.6; }
+    .badge-emoji { font-size: 26px; margin-bottom: 5px; }
+    .badge-name  { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+    .badge-desc  { font-size: 10px; color: var(--t3); }
+
+    /* Top posts */
+    .post-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .post-row:last-child { border-bottom: none; }
+    .post-rank { font-size: 10px; font-weight: 700; }
+    .post-info { flex: 1; min-width: 0; }
+    .post-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+    .post-meta  { display: flex; gap: 8px; align-items: center; }
+    .post-platform { font-size: 11px; font-weight: 600; }
+    .post-date     { font-size: 11px; color: var(--t3); }
+    .post-stats { text-align: right; flex-shrink: 0; }
+    .post-views { font-weight: 600; font-size: 13px; }
+    .post-eng   { font-size: 11px; }
+
+    /* Legend dots */
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+    .legend-line { width: 12px; height: 2px; border-radius: 2px; }
+    .legend-label{ font-size: 12px; color: var(--t3); }
+
+    /* ══════════════════════════════════════
+       CALENDAR VIEW
+    ══════════════════════════════════════ */
+    .cal-header-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .platform-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .plat-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .plat-label { font-size: 11px; color: var(--t3); text-transform: capitalize; }
+
+    .cal-grid-wrap { overflow-x: auto; }
+    .cal-day-headers {
+      display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 5px;
+    }
+    .cal-day-head { text-align: center; font-size: 10px; color: var(--t3); font-weight: 700; padding: 5px 0; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+    .cal-cell {
+      min-height: 76px; border-radius: 10px; padding: 7px 5px;
+      background: var(--bg3); border: 1px solid var(--border);
+      transition: border-color 0.18s; overflow: hidden;
+    }
+    .cal-cell.today { background: rgba(196,129,58,0.1); border-color: rgba(196,129,58,0.4); }
+    .cal-cell.drag-over { border-color: var(--amber) !important; }
+    .cal-num { font-size: 11px; font-weight: 400; color: var(--t3); margin-bottom: 3px; }
+    .cal-cell.today .cal-num { color: var(--amber); font-weight: 700; }
+    .post-chip {
+      font-size: 9px; font-weight: 600; border-radius: 5px;
+      padding: 2px 5px; margin-bottom: 2px; overflow: hidden;
+      white-space: nowrap; text-overflow: ellipsis; cursor: grab;
+      line-height: 1.5; display: block;
+    }
+    .post-chip:active { cursor: grabbing; }
+    .more-chip { font-size: 9px; color: var(--t3); }
+
+    /* Upcoming list */
+    .upcoming-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 13px; background: var(--bg3);
+      border-radius: 10px; border: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .upcoming-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .upcoming-info { flex: 1; min-width: 0; }
+    .upcoming-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .upcoming-date  { font-size: 11px; color: var(--t3); margin-top: 1px; }
+    .delete-chip-btn {
+      background: none; border: none; color: var(--t3); cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 2px 4px; flex-shrink: 0;
+    }
+    .delete-chip-btn:hover { color: var(--danger); }
+
+    /* ══════════════════════════════════════
+       MODAL
+    ══════════════════════════════════════ */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.76); backdrop-filter: blur(6px);
+      align-items: flex-end; justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal-box {
+      width: 100%; max-width: 500px; background: var(--bg2);
+      border-radius: 24px 24px 0 0; padding: 22px 20px 36px;
+      border: 1px solid var(--border2); border-bottom: none;
+    }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 18px; }
+    .modal-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .modal-title { font-family: 'Playfair Display', serif; font-size: 20px; }
+    .modal-form { display: flex; flex-direction: column; gap: 13px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+    /* ══════════════════════════════════════
+       ANALYTICS VIEW
+    ══════════════════════════════════════ */
+    .platform-filter {
+      display: flex; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 9px; overflow: hidden;
+    }
+    .pf-btn {
+      padding: 7px 13px; border: none; cursor: pointer;
+      font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 600;
+      transition: all 0.18s; background: transparent; color: var(--t3);
+      text-transform: capitalize;
+    }
+    .pf-btn.active { background: var(--brown); color: #0A0806; }
+
+    .plat-card { padding: 16px; }
+    .plat-card-top { display: flex; justify-content: space-between; margin-bottom: 9px; }
+    .plat-card-icon { font-size: 20px; }
+    .plat-card-name { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .plat-card-num  { font-size: 24px; margin-bottom: 3px; }
+    .plat-card-sub  { font-size: 11px; color: var(--t3); margin-bottom: 9px; }
+    .plat-prog-bg   { background: var(--border); border-radius: 4px; height: 3px; }
+    .plat-prog-fill { height: 100%; border-radius: 4px; }
+
+    /* ══════════════════════════════════════
+       BIO VIEW
+    ══════════════════════════════════════ */
+    .link-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg3); padding: 9px 12px; border-radius: 10px;
+      border: 1px solid var(--border); margin-bottom: 7px;
+    }
+    .link-icon  { font-size: 17px; }
+    .link-info  { flex: 1; min-width: 0; }
+    .link-label { font-size: 13px; font-weight: 500; }
+    .link-url   { font-size: 11px; color: var(--t3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .link-del   { background: none; border: none; color: var(--t3); cursor: pointer; font-size: 17px; }
+    .link-del:hover { color: var(--danger); }
+
+    .bio-preview { background: var(--bg3); border-radius: 14px; padding: 18px; text-align: center; }
+    .bio-prev-avatar {
+      width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 9px;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 21px; font-weight: 700; color: #0A0806;
+    }
+    .bio-prev-name { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .bio-prev-bio  { font-size: 11px; color: var(--t3); margin-bottom: 12px; line-height: 1.5; }
+    .bio-prev-link {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 9px;
+      padding: 9px 14px; display: flex; align-items: center; gap: 8px;
+      font-size: 12px; margin-bottom: 7px;
+    }
+
+    .revenue-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+    .rev-dot-label { display: flex; align-items: center; gap: 8px; }
+    .rev-dot   { width: 8px; height: 8px; border-radius: 50%; }
+    .rev-label { font-size: 12px; color: var(--t2); }
+    .rev-value { font-size: 13px; font-weight: 600; }
+
+    /* ══════════════════════════════════════
+       ALERTS VIEW
+    ══════════════════════════════════════ */
+    .alert-card {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 14px 16px; border-radius: 13px;
+      border: 1px solid var(--border); background: var(--bg2); margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .alert-card:hover { border-color: var(--border2); }
+    .alert-emoji { font-size: 24px; flex-shrink: 0; }
+    .alert-body  { flex: 1; }
+    .alert-msg   { font-weight: 500; font-size: 14px; margin-bottom: 5px; }
+    .alert-meta  { display: flex; gap: 8px; align-items: center; }
+    .alert-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .alert-dismiss {
+      background: none; border: none; color: var(--t3); cursor: pointer; font-size: 18px; line-height: 1;
+    }
+    .alert-dismiss:hover { color: var(--danger); }
+
+    .pref-row {
+      display: flex; align-items: center; gap: 13px;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .pref-row:last-child { border-bottom: none; }
+    .pref-icon { font-size: 20px; }
+    .pref-body { flex: 1; }
+    .pref-title { font-weight: 500; font-size: 14px; }
+    .pref-desc  { font-size: 12px; color: var(--t3); margin-top: 2px; }
+
+    /* ══════════════════════════════════════
+       PROFILE VIEW
+    ══════════════════════════════════════ */
+    .tab-row { display: flex; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 4px; width: fit-content; margin-bottom: 22px; }
+    .tab-btn {
+      padding: 8px 18px; border: none; border-radius: 8px; cursor: pointer;
+      font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600;
+      transition: all 0.2s; background: transparent; color: var(--t3);
+    }
+    .tab-btn.active { background: var(--brown); color: #0A0806; }
+
+    .avatar-section { display: flex; align-items: center; gap: 13px; margin-bottom: 16px; }
+    .profile-avatar {
+      width: 58px; height: 58px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brown), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #0A0806;
+    }
+    .avatar-hint { font-size: 10px; color: var(--t3); margin-top: 4px; }
+
+    .plan-card {
+      background: linear-gradient(135deg, rgba(196,129,58,0.14), rgba(240,165,0,0.07));
+      border: 1px solid rgba(196,129,58,0.25); border-radius: 18px; padding: 20px;
+    }
+    .plan-feature { display: flex; gap: 8px; font-size: 12px; color: var(--t2); margin-bottom: 6px; }
+    .plan-check { color: var(--success); }
+
+    .danger-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 18px; padding: 20px; }
+    .danger-title { font-size: 15px; font-weight: 600; color: var(--danger); margin-bottom: 8px; }
+    .danger-desc  { color: var(--t3); font-size: 12px; margin-bottom: 13px; }
+    .btn-danger {
+      background: rgba(240,112,112,0.1); border: 1px solid rgba(240,112,112,0.3);
+      color: var(--danger); border-radius: 9px; padding: 8px 14px; cursor: pointer;
+      font-size: 12px; font-family: 'Sora', sans-serif; font-weight: 600;
+    }
+
+    .account-item {
+      display: flex; align-items: center; gap: 13px; padding: 12px 14px;
+      background: var(--bg3); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 9px;
+    }
+    .account-item.disconnected { background: var(--bg1); border-style: dashed; opacity: 0.7; }
+    .account-icon { font-size: 22px; }
+    .account-info { flex: 1; }
+    .account-plat { font-weight: 600; font-size: 13px; text-transform: capitalize; }
+    .account-handle { font-size: 11px; color: var(--t3); }
+
+    /* ══════════════════════════════════════
+       ONBOARDING BANNER
+    ══════════════════════════════════════ */
+    #onboarding-banner {
+      display: none; background: linear-gradient(135deg, rgba(196,129,58,0.18), rgba(240,165,0,0.08));
+      border: 1px solid rgba(196,129,58,0.35); border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 20px; gap: 13px; align-items: center;
+    }
+    #onboarding-banner.show { display: flex; }
+    .ob-icon { font-size: 22px; flex-shrink: 0; }
+    .ob-body { flex: 1; }
+    .ob-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+    .ob-desc  { font-size: 12px; color: var(--t3); }
+    .ob-close {
+      background: none; border: none; color: var(--t3);
+      cursor: pointer; font-size: 19px; flex-shrink: 0; line-height: 1;
+    }
+
+    /* ══════════════════════════════════════
+       RESPONSIVE — MOBILE
+    ══════════════════════════════════════ */
+    @media (max-width: 767px) {
+      #sidebar { display: none; }
+      #mobile-header { display: flex; }
+      #bottom-nav { display: block; }
+      #fab { display: flex; }
+      #main { max-width: 100vw; padding: 78px 14px 96px; }
+      .view-actions .btn-g { display: none; }
+      .g2 { grid-template-columns: 1fr; }
+      .g4 { grid-template-columns: 1fr 1fr; }
+      .view-title { font-size: 22px; }
+      .tab-btn { padding: 7px 12px; font-size: 11px; }
+    }
+    @media (max-width: 480px) {
+      .g4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (min-width: 768px) {
+      #mobile-header, #bottom-nav, #fab { display: none !important; }
+    }
+    @media (max-width: 1100px) {
+      .g4 { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-width: 900px) {
+      .g2.analytics-plat { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-glow"></div>
+  <div class="auth-blob1"></div>
+  <div class="auth-box fade-up">
+    <div class="auth-logo">
+      <div class="auth-logo-row">
+        <div class="auth-logo-icon">⚡</div>
+        <span class="auth-logo-text">CreatorHub</span>
+      </div>
+      <p class="auth-subtitle">Your creator empire starts here</p>
+    </div>
+    <div class="auth-card" id="auth-login-panel">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthMode('login')">Sign In</button>
+        <button class="auth-tab" onclick="switchAuthMode('signup')">Sign Up</button>
+      </div>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-form">
+        <div id="signup-name-wrap" style="display:none">
+          <input type="text" id="auth-name" placeholder="Full name" />
+        </div>
+        <input type="email" id="auth-email" placeholder="Email address" />
+        <input type="password" id="auth-password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <div class="auth-row">
+        <label class="remember-label">
+          <input type="checkbox" id="auth-remember" style="accent-color:var(--brown);width:auto" />
+          Remember me
+        </label>
+        <button class="forgot-btn" onclick="switchAuthMode('reset')">Forgot password?</button>
+      </div>
+      <button class="btn btn-p auth-submit" id="auth-submit-btn" onclick="doLogin()">Sign In →</button>
+      <p class="auth-tos" id="auth-tos" style="display:none">By signing up you agree to our Terms & Privacy Policy</p>
+    </div>
+    <div class="auth-card" id="auth-reset-panel" style="display:none">
+      <h3 class="display" style="font-size:21px;margin-bottom:5px">Reset Password</h3>
+      <p style="color:var(--t3);font-size:13px;margin-bottom:20px">Enter your email for a reset link</p>
+      <div id="reset-form-wrap">
+        <input type="email" id="reset-email" placeholder="Email address" style="margin-bottom:12px" />
+        <button class="btn btn-p auth-submit" onclick="doReset()">Send Reset Link</button>
+      </div>
+      <div class="auth-reset-sent" id="reset-sent" style="display:none">
+        <div style="font-size:44px;margin-bottom:10px">📬</div>
+        <p style="color:var(--success);font-weight:600">Reset link sent!</p>
+        <p style="color:var(--t3);font-size:13px;margin-top:5px">Check your inbox</p>
+      </div>
+      <button class="btn btn-g auth-submit" style="margin-top:10px" onclick="switchAuthMode('login')">← Back to Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     APP SHELL
+═══════════════════════════════════════ -->
+<div id="app" style="display:none">
+
+  <!-- Desktop Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text">CreatorHub</span>
+    </div>
+    <p class="section-label">Menu</p>
+    <nav id="desktop-nav">
+      <div class="nav-item active" data-view="home">
+        <span class="nav-icon">⊞</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="calendar">
+        <span class="nav-icon">📅</span> Calendar
+      </div>
+      <div class="nav-item" data-view="analytics">
+        <span class="nav-icon">📈</span> Analytics
+      </div>
+      <div class="nav-item" data-view="bio">
+        <span class="nav-icon">🔗</span> Bio & Money
+      </div>
+      <div class="nav-item" data-view="alerts">
+        <span class="nav-icon">🔔</span> Alerts <span class="nav-badge">3</span>
+      </div>
+      <div class="nav-item" data-view="profile">
+        <span class="nav-icon">👤</span> Profile
+      </div>
+    </nav>
+
+    <div class="streak-widget">
+      <div class="streak-top">
+        <span>🔥</span>
+        <span class="streak-num">14 day streak</span>
+      </div>
+      <div class="streak-bar-bg">
+        <div class="streak-bar-fill" style="width:47%"></div>
+      </div>
+      <p class="streak-hint">16 days to next badge</p>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">J</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-name">Jordan Rivers</div>
+        <div class="user-plan">Pro Plan</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="Logout">⬡</button>
+    </div>
+  </aside>
+
+  <!-- Mobile Header -->
+  <header id="mobile-header">
+    <button id="menu-btn" onclick="openDrawer()">☰</button>
+    <div class="mobile-logo">
+      <div class="mobile-logo-icon">⚡</div>
+      <span class="mobile-page-title" id="mobile-page-title">Dashboard</span>
+    </div>
+    <div class="user-avatar" style="width:32px;height:32px;font-size:13px" id="mobile-avatar">J</div>
+  </header>
+
+  <!-- Mobile Drawer -->
+  <div id="drawer-overlay" onclick="if(event.target===this)closeDrawer()">
+    <div id="drawer" onclick="event.stopPropagation()">
+      <div class="drawer-header">
+        <div class="mobile-logo">
+          <div class="mobile-logo-icon">⚡</div>
+          <span style="font-family:'Playfair Display',serif;font-size:17px">CreatorHub</span>
+        </div>
+        <button id="close-drawer-btn" onclick="closeDrawer()">✕</button>
+      </div>
+      <div class="drawer-user">
+        <div class="drawer-avatar" id="drawer-avatar">J</div>
+        <div>
+          <div style="font-weight:600;font-size:14px" id="drawer-name">Jordan Rivers</div>
+          <div style="font-size:11px;color:var(--t3)" id="drawer-username">@jordanrivers · Pro</div>
+        </div>
+      </div>
+      <nav id="drawer-nav">
+        <div class="nav-item active" data-view="home">⊞ &nbsp;Dashboard</div>
+        <div class="nav-item" data-view="calendar">📅 &nbsp;Calendar</div>
+        <div class="nav-item" data-view="analytics">📈 &nbsp;Analytics</div>
+        <div class="nav-item" data-view="bio">🔗 &nbsp;Bio & Money</div>
+        <div class="nav-item" data-view="alerts">🔔 &nbsp;Alerts &nbsp;<span class="nav-badge">3</span></div>
+        <div class="nav-item" data-view="profile">👤 &nbsp;Profile & Settings</div>
+      </nav>
+      <div style="padding:0 12px 12px">
+        <div class="streak-widget">
+          <div class="streak-top"><span>🔥</span><span class="streak-num">14 day streak</span></div>
+          <div class="streak-bar-bg"><div class="streak-bar-fill" style="width:47%"></div></div>
+        </div>
+      </div>
+      <div class="drawer-bottom">
+        <button class="btn btn-g" style="width:100%;justify-content:center" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <main id="main">
+
+    <!-- Onboarding Banner -->
+    <div id="onboarding-banner" class="fade-up">
+      <span class="ob-icon">👋</span>
+      <div class="ob-body">
+        <div class="ob-title" id="ob-greeting">Welcome, Jordan!</div>
+        <div class="ob-desc">Connect your social accounts to unlock real analytics.</div>
+      </div>
+      <button class="btn btn-p btn-sm" onclick="navigateTo('profile');closeOnboarding()">Start →</button>
+      <button class="ob-close" onclick="closeOnboarding()">✕</button>
+    </div>
+
+    <!-- ── DASHBOARD VIEW ── -->
+    <div class="view active fade-up" id="view-home">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title" id="dash-greeting">Good evening, Jordan 👋</h2>
+          <p class="view-sub">Here's your empire at a glance</p>
+        </div>
+        <div class="view-actions">
+          <button class="btn btn-g btn-sm">📥 Export</button>
+          <button class="btn btn-p btn-sm" onclick="openModal()">+ New Post</button>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="g4" style="margin-bottom:16px">
+        <div class="card stat-card">
+          <div class="stat-card-bg">👥</div>
+          <div class="stat-icon">👥</div>
+          <div class="stat-num stat-value" style="font-size:26px">61.1k</div>
+          <div class="stat-label">Total Followers</div>
+          <span class="badge b-green">↑ 8.2%</span>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-card-bg">💬</div>
+          <div class="stat-icon">💬</div>
+          <div class="stat-num stat-value" style="font-size:26px">6.4%</div>
+          <div class="stat-label">Avg Engagement</div>
+          <span class="badge b-green">↑ 1.3%</span>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-card-bg">💰</div>
+          <div class="stat-icon">💰</div>
+          <div class="stat-num stat-value" style="font-size:26px">$3.8k</div>
+          <div class="stat-label">Monthly Revenue</div>
+          <span class="badge b-green">↑ 22.1%</span>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-card-bg">📝</div>
+          <div class="stat-icon">📝</div>
+          <div class="stat-num stat-value" style="font-size:26px">24</div>
+          <div class="stat-label">Posts Published</div>
+          <span class="badge b-red">↓ 4.0%</span>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="section-head">
+            <h3>Follower Growth</h3>
+            <span class="badge b-amber">6 months</span>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-growth"></canvas></div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#E1306C"></div><span class="legend-label">Instagram</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#69C9D0"></div><span class="legend-label">TikTok</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-head">
+            <h3>Daily Engagement</h3>
+            <span class="badge b-brown">This week</span>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-engagement"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Best times + badges -->
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="section-head"><h3>📍 Best Posting Times</h3></div>
+          <div id="best-times-list"></div>
+        </div>
+        <div class="card">
+          <div class="section-head"><h3>🏆 Badges</h3></div>
+          <div class="badge-grid" id="badges-grid"></div>
+        </div>
+      </div>
+
+      <!-- Top posts -->
+      <div class="card">
+        <div class="section-head"><h3>🔥 Top Performing Posts</h3></div>
+        <div id="top-posts-list"></div>
+      </div>
+    </div>
+
+    <!-- ── CALENDAR VIEW ── -->
+    <div class="view fade-up" id="view-calendar">
+      <div class="cal-header-row">
+        <div>
+          <h2 class="view-title">Content Calendar</h2>
+          <p class="view-sub">Drag posts to reschedule · March 2026</p>
+        </div>
+        <button class="btn btn-p btn-sm" onclick="openModal()">+ Schedule Post</button>
+      </div>
+      <div class="platform-legend" id="plat-legend"></div>
+      <div class="card" style="margin-bottom:16px;padding:16px">
+        <div class="cal-grid-wrap">
+          <div style="min-width:320px">
+            <div class="cal-day-headers">
+              <div class="cal-day-head">Su</div><div class="cal-day-head">Mo</div>
+              <div class="cal-day-head">Tu</div><div class="cal-day-head">We</div>
+              <div class="cal-day-head">Th</div><div class="cal-day-head">Fr</div>
+              <div class="cal-day-head">Sa</div>
+            </div>
+            <div class="cal-grid" id="calendar-grid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h3>Upcoming Posts</h3></div>
+        <div id="upcoming-list"></div>
+      </div>
+    </div>
+
+    <!-- ── ANALYTICS VIEW ── -->
+    <div class="view fade-up" id="view-analytics">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Analytics</h2>
+          <p class="view-sub">Performance deep-dive</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="platform-filter">
+            <button class="pf-btn active" onclick="setPlatFilter(this,'all')">all</button>
+            <button class="pf-btn" onclick="setPlatFilter(this,'instagram')">instagram</button>
+            <button class="pf-btn" onclick="setPlatFilter(this,'tiktok')">tiktok</button>
+            <button class="pf-btn" onclick="setPlatFilter(this,'youtube')">youtube</button>
+          </div>
+          <button class="btn btn-g btn-sm">📥 CSV</button>
+        </div>
+      </div>
+      <div class="g4" style="margin-bottom:16px" id="analytics-plat-cards"></div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="section-head"><h3>Engagement Breakdown</h3></div>
+          <div class="chart-wrap"><canvas id="chart-eng-breakdown"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="section-head"><h3>All-Platform Growth</h3></div>
+          <div class="chart-wrap"><canvas id="chart-all-growth"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BIO VIEW ── -->
+    <div class="view fade-up" id="view-bio">
+      <div class="view-header">
+        <div><h2 class="view-title">Bio & Monetization</h2><p class="view-sub">Your link-in-bio and revenue</p></div>
+      </div>
+      <div class="g2">
+        <!-- Builder -->
+        <div class="card">
+          <div class="section-head"><h3>🔗 Bio Link Builder</h3></div>
+          <div style="margin-bottom:13px">
+            <label class="field-label">Bio text</label>
+            <textarea id="bio-text" rows="3" style="resize:vertical">Content creator | Tech &amp; Lifestyle
+3x viral poster 🔥 | collab open</textarea>
+          </div>
+          <div id="links-list" style="margin-bottom:13px"></div>
+          <div style="border-top:1px solid var(--border);padding-top:13px">
+            <label class="field-label">Add new link</label>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input type="text" id="new-link-icon" placeholder="🔗" style="width:52px" />
+              <input type="text" id="new-link-label" placeholder="Link label" />
+            </div>
+            <input type="text" id="new-link-url" placeholder="https://…" style="margin-bottom:8px" />
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-g" style="flex:1;justify-content:center" onclick="addLink()">Add</button>
+              <button class="btn btn-p" style="flex:1;justify-content:center" id="bio-save-btn" onclick="saveBio()">Save Changes</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="gcol">
+          <!-- Revenue -->
+          <div class="card">
+            <div class="section-head"><h3>💰 Revenue</h3></div>
+            <div class="stat-num" style="font-size:28px;margin-bottom:4px">$3,847.50</div>
+            <p style="color:var(--t3);font-size:12px;margin-bottom:16px">This month · all sources</p>
+            <div class="chart-wrap" style="height:160px"><canvas id="chart-revenue"></canvas></div>
+            <div style="margin-top:10px" id="revenue-breakdown"></div>
+          </div>
+          <!-- Preview -->
+          <div class="card">
+            <div class="section-head"><h3>👁 Preview</h3></div>
+            <div class="bio-preview" id="bio-preview"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALERTS VIEW ── -->
+    <div class="view fade-up" id="view-alerts">
+      <div class="view-header">
+        <div><h2 class="view-title">Alerts</h2><p class="view-sub">Real-time engagement notifications</p></div>
+      </div>
+      <div id="alerts-list" style="margin-bottom:20px"></div>
+      <div class="card">
+        <div class="section-head"><h3>🔔 Notification Preferences</h3></div>
+        <div id="prefs-list"></div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE VIEW ── -->
+    <div class="view fade-up" id="view-profile">
+      <div class="view-header">
+        <div><h2 class="view-title">Profile & Settings</h2><p class="view-sub">Manage your account</p></div>
+      </div>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchProfileTab('info',this)">Profile</button>
+        <button class="tab-btn" onclick="switchProfileTab('accounts',this)">Accounts</button>
+        <button class="tab-btn" onclick="switchProfileTab('settings',this)">Settings</button>
+      </div>
+
+      <!-- Profile Info Tab -->
+      <div id="profile-tab-info">
+        <div class="g2">
+          <div class="card">
+            <div class="section-head"><h3>Personal Info</h3></div>
+            <div class="avatar-section">
+              <div class="profile-avatar" id="profile-avatar-el">J</div>
+              <div>
+                <button class="btn btn-g btn-sm">Change Avatar</button>
+                <p class="avatar-hint">JPG, PNG or GIF · Max 2MB</p>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:13px">
+              <div><label class="field-label">Full Name</label><input type="text" id="prof-name" value="Jordan Rivers" /></div>
+              <div><label class="field-label">Email</label><input type="email" id="prof-email" value="jordan@creatorhub.co" /></div>
+              <div><label class="field-label">Username</label><input type="text" id="prof-username" value="@jordanrivers" /></div>
+              <div><label class="field-label">Bio</label><textarea id="prof-bio" rows="3" style="resize:vertical">Content creator | Tech &amp; Lifestyle | 3x viral poster 🔥</textarea></div>
+              <button class="btn btn-p" style="justify-content:center" id="prof-save-btn" onclick="saveProfile()">Save Changes</button>
+            </div>
+          </div>
+          <div class="gcol">
+            <div class="plan-card">
+              <span class="badge b-amber" style="margin-bottom:10px">⚡ Pro Plan</span>
+              <h3 class="display" style="font-size:20px;margin-bottom:12px">Creator Pro</h3>
+              <div class="plan-feature"><span class="plan-check">✓</span>Unlimited scheduled posts</div>
+              <div class="plan-feature"><span class="plan-check">✓</span>Advanced analytics</div>
+              <div class="plan-feature"><span class="plan-check">✓</span>Priority support</div>
+              <div class="plan-feature"><span class="plan-check">✓</span>Revenue tracking</div>
+              <div class="plan-feature"><span class="plan-check">✓</span>Export reports</div>
+              <button class="btn btn-g" style="margin-top:12px">Manage Plan</button>
+            </div>
+            <div class="danger-card">
+              <div class="danger-title">⚠ Danger Zone</div>
+              <div class="danger-desc">These actions are permanent and irreversible.</div>
+              <div style="display:flex;gap:9px">
+                <button class="btn-danger">Delete Account</button>
+                <button class="btn btn-g btn-sm">Export Data</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accounts Tab -->
+      <div id="profile-tab-accounts" style="display:none">
+        <div class="card">
+          <div class="section-head"><h3>Connected Accounts</h3></div>
+          <div id="connected-accounts-list"></div>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="profile-tab-settings" style="display:none">
+        <div class="card">
+          <div class="section-head"><h3>App Preferences</h3></div>
+          <div id="app-prefs-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- end #main -->
+
+  <!-- Bottom Nav (mobile) -->
+  <nav id="bottom-nav">
+    <div class="bnav-inner">
+      <button class="bnav-item active" data-view="home"><span class="bnav-icon">⊞</span>Home</button>
+      <button class="bnav-item" data-view="calendar"><span class="bnav-icon">📅</span>Calendar</button>
+      <button class="bnav-item" data-view="analytics"><span class="bnav-icon">📈</span>Stats</button>
+      <button class="bnav-item" data-view="bio"><span class="bnav-icon">🔗</span>Bio</button>
+      <button class="bnav-item" data-view="profile"><span class="bnav-icon">👤</span>Profile</button>
+    </div>
+  </nav>
+
+  <!-- FAB (mobile calendar) -->
+  <button id="fab" onclick="openModal()">+</button>
+
+</div><!-- end #app -->
+
+<!-- ═══════════════════════════════════════
+     MODAL
+═══════════════════════════════════════ -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box" class="slide-up">
+    <div class="modal-handle"></div>
+    <div class="modal-title-row">
+      <h3 class="modal-title">Schedule Post</h3>
+      <button class="btn btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <div><label class="field-label">Caption / Title</label><input type="text" id="new-post-title" placeholder="What's your post about?" /></div>
+      <div class="g2">
+        <div>
+          <label class="field-label">Platform</label>
+          <select id="new-post-platform">
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="twitter">Twitter / X</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Status</label>
+          <select id="new-post-status">
+            <option value="scheduled">Scheduled</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div><label class="field-label">Date</label><input type="date" id="new-post-date" /></div>
+        <div><label class="field-label">Time</label><input type="time" id="new-post-time" value="18:00" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-g" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" style="flex:1;justify-content:center" onclick="addPost()">Schedule ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
+<script>
+/* ══════════════════════════════════════
+   DATA
+══════════════════════════════════════ */
+const USER = {
+  name: "Jordan Rivers", email: "jordan@creatorhub.co",
+  username: "@jordanrivers", bio: "Content creator | Tech & Lifestyle\n3x viral poster 🔥",
+  plan: "Pro", streak: 14,
+  accounts: [
+    { platform: "instagram", handle: "@jordanrivers", followers: 12400, color: "#E1306C" },
+    { platform: "tiktok",   handle: "@jordanrivers", followers: 34200, color: "#69C9D0" },
+    { platform: "youtube",  handle: "Jordan Rivers",  followers: 8900,  color: "#FF4040" },
+    { platform: "twitter",  handle: "@jrivers",       followers: 5600,  color: "#1DA1F2" },
+  ]
+};
+
+const FOLLOWER_DATA = {
+  labels: ["Aug","Sep","Oct","Nov","Dec","Jan"],
+  instagram: [8200,9100,10200,11100,11800,12400],
+  tiktok:    [18000,21000,25500,28000,31000,34200],
+  youtube:   [5400,6100,6800,7400,8200,8900],
+  twitter:   [3200,3800,4200,4800,5100,5600],
+};
+
+const ENG_DATA = [
+  { d:"Mon", r:4.2, l:840,  c:120, s:62  },
+  { d:"Tue", r:3.8, l:760,  c:98,  s:44  },
+  { d:"Wed", r:6.1, l:1220, c:198, s:112 },
+  { d:"Thu", r:5.4, l:1080, c:156, s:88  },
+  { d:"Fri", r:7.8, l:1560, c:245, s:167 },
+  { d:"Sat", r:8.2, l:1640, c:278, s:189 },
+  { d:"Sun", r:6.9, l:1380, c:210, s:143 },
+];
+
+const TOP_POSTS = [
+  { title:"Day in my life as a solo creator 🎬", platform:"tiktok",    views:284000, eng:18.4, date:"Jan 28" },
+  { title:"My full YouTube setup for $500",       platform:"youtube",   views:124000, eng:9.2,  date:"Jan 22" },
+  { title:"Honest review: Creator economy 2025",  platform:"instagram", views:89000,  eng:11.3, date:"Jan 19" },
+  { title:"How I gained 10k in 30 days",          platform:"twitter",   views:67000,  eng:8.7,  date:"Jan 15" },
+];
+
+const BEST_TIMES = [
+  {h:"6am",s:42},{h:"8am",s:61},{h:"10am",s:55},
+  {h:"12pm",s:70},{h:"2pm",s:53},{h:"4pm",s:66},
+  {h:"6pm",s:88},{h:"8pm",s:95},{h:"10pm",s:74},
+];
+
+const BADGES = [
+  { icon:"🌟", label:"Early Adopter", desc:"First wave creator" },
+  { icon:"🔥", label:"Viral King",    desc:"100k+ views on a post" },
+  { icon:"⚡", label:"On Fire",       desc:"14-day posting streak" },
+  { icon:"👑", label:"1K Club",       desc:"Crossed 1,000 followers" },
+];
+
+const MONEY_DATA = [
+  { name:"Sponsorships", v:2400,   color:"#C4813A" },
+  { name:"Ad Revenue",   v:847.50, color:"#F0A500" },
+  { name:"Affiliates",   v:600,    color:"#8B5E2A" },
+];
+
+let POSTS = [
+  { id:"p1", title:"Morning routine video",  platform:"youtube",   date:"2026-03-03", time:"08:00", status:"scheduled" },
+  { id:"p2", title:"Studio tour reel",        platform:"instagram", date:"2026-03-05", time:"18:00", status:"scheduled" },
+  { id:"p3", title:"Creator tips thread",     platform:"twitter",   date:"2026-03-07", time:"12:00", status:"draft"     },
+  { id:"p4", title:"Behind the scenes",       platform:"tiktok",    date:"2026-03-10", time:"20:00", status:"scheduled" },
+  { id:"p5", title:"Q&A session",             platform:"instagram", date:"2026-03-12", time:"19:00", status:"draft"     },
+  { id:"p6", title:"Gear review",             platform:"youtube",   date:"2026-03-15", time:"16:00", status:"scheduled" },
+  { id:"p7", title:"Trending sound dance",    platform:"tiktok",    date:"2026-03-18", time:"20:00", status:"scheduled" },
+];
+
+let ALERTS = [
+  { id:1, type:"high",      msg:"Friday post is 3.2× above average!", platform:"tiktok",    time:"2h ago" },
+  { id:2, type:"low",       msg:"Tuesday post underperforming. Try 8pm.", platform:"instagram", time:"1d ago" },
+  { id:3, type:"milestone", msg:"🎉 You hit 34k followers on TikTok!", platform:"tiktok",    time:"3d ago" },
+];
+
+let BIO_LINKS = [
+  { id:1, icon:"▶️", label:"My YouTube Channel", url:"https://youtube.com/@jordanrivers" },
+  { id:2, icon:"🛍️", label:"Shop My Gear",        url:"https://shop.example.com" },
+  { id:3, icon:"📅", label:"Book a Collab",       url:"https://calendly.com/jordanrivers" },
+];
+
+const PREFS = [
+  { k:"eng_high", icon:"📈", label:"High engagement alerts",    desc:"Post is 2× above your average", on:true },
+  { k:"eng_low",  icon:"📉", label:"Low engagement warnings",   desc:"Post underperforming",           on:true },
+  { k:"miles",    icon:"🎉", label:"Follower milestones",       desc:"Every 1,000 new followers",      on:true },
+  { k:"best",     icon:"⏰", label:"Best time reminders",       desc:"Prompt to post at peak hours",   on:false},
+  { k:"revenue",  icon:"💰", label:"Revenue updates",           desc:"Monthly monetisation summaries", on:true },
+];
+
+const APP_PREFS = [
+  { k:"dark",    icon:"🌙", label:"Dark Mode",         desc:"Always on",                         on:true  },
+  { k:"emails",  icon:"📧", label:"Email Digests",     desc:"Weekly performance summary",         on:true  },
+  { k:"push",    icon:"🔔", label:"Push Notifications",desc:"Browser alerts",                    on:false },
+  { k:"reports", icon:"📊", label:"Weekly Reports",    desc:"Auto PDF every Monday",              on:true  },
+  { k:"tips",    icon:"💡", label:"Onboarding Tips",   desc:"Helpful hints for new features",    on:false },
+];
+
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+const fmt = n => n>=1e6?(n/1e6).toFixed(1)+"M":n>=1000?(n/1000).toFixed(1)+"k":String(n);
+const pColor = p => ({instagram:"#E1306C",tiktok:"#69C9D0",youtube:"#FF4040",twitter:"#1DA1F2"})[p]||"#C4813A";
+const pIcon  = p => ({instagram:"📸",tiktok:"🎵",youtube:"▶️",twitter:"𝕏"})[p]||"🔗";
+const isMobile = () => window.innerWidth < 768;
+
+/* ══════════════════════════════════════
+   AUTH
+══════════════════════════════════════ */
+let authMode = "login";
+
+function switchAuthMode(mode) {
+  authMode = mode;
+  const loginPanel = document.getElementById('auth-login-panel');
+  const resetPanel = document.getElementById('auth-reset-panel');
+  const nameWrap   = document.getElementById('signup-name-wrap');
+  const tos        = document.getElementById('auth-tos');
+  const submitBtn  = document.getElementById('auth-submit-btn');
+  const tabs       = document.querySelectorAll('.auth-tab');
+
+  document.getElementById('reset-sent').style.display = 'none';
+  document.getElementById('reset-form-wrap').style.display = '';
+
+  if (mode === 'reset') {
+    loginPanel.style.display = 'none';
+    resetPanel.style.display = '';
+    return;
+  }
+  loginPanel.style.display = '';
+  resetPanel.style.display = 'none';
+
+  tabs[0].classList.toggle('active', mode === 'login');
+  tabs[1].classList.toggle('active', mode === 'signup');
+  nameWrap.style.display   = mode === 'signup' ? '' : 'none';
+  tos.style.display        = mode === 'signup' ? '' : 'none';
+  submitBtn.textContent    = mode === 'login' ? 'Sign In →' : 'Create Account →';
+
+  document.querySelector('.forgot-btn').style.display = mode === 'login' ? '' : 'none';
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = '';
+}
+function clearAuthError() {
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function doLogin() {
+  clearAuthError();
+  const email = document.getElementById('auth-email').value;
+  const pass  = document.getElementById('auth-password').value;
+  if (!email || !pass) { showAuthError('Please fill in all fields.'); return; }
+
+  const btn = document.getElementById('auth-submit-btn');
+  btn.textContent = 'Loading…'; btn.disabled = true;
+  await sleep(800);
+  btn.textContent = authMode === 'login' ? 'Sign In →' : 'Create Account →'; btn.disabled = false;
+
+  // BACKEND: POST /api/auth/login → { token, user }
+  if (document.getElementById('auth-remember').checked) {
+    localStorage.setItem('ch_auth', '1');
+  }
+  bootApp();
+}
+
+async function doReset() {
+  await sleep(700);
+  document.getElementById('reset-form-wrap').style.display = 'none';
+  document.getElementById('reset-sent').style.display = '';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ══════════════════════════════════════
+   APP BOOT
+══════════════════════════════════════ */
+function bootApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  // Set user info
+  const initial = USER.name[0];
+  ['sidebar-avatar','mobile-avatar','drawer-avatar','profile-avatar-el'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = initial;
+  });
+  document.getElementById('sidebar-name').textContent = USER.name;
+  document.getElementById('drawer-name').textContent   = USER.name;
+  document.getElementById('drawer-username').textContent = USER.username + ' · ' + USER.plan;
+
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dash-greeting').textContent = `${greet}, ${USER.name.split(' ')[0]} 👋`;
+  document.getElementById('ob-greeting').textContent   = `Welcome, ${USER.name.split(' ')[0]}!`;
+
+  // Show onboarding if first visit
+  if (!localStorage.getItem('ch_seen_ob')) {
+    document.getElementById('onboarding-banner').classList.add('show');
+    localStorage.setItem('ch_seen_ob', '1');
+  }
+
+  initNav();
+  renderAll();
+}
+
+function doLogout() {
+  localStorage.removeItem('ch_auth');
+  location.reload();
+}
+
+/* ══════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════ */
+const PAGE_TITLES = { home:"Dashboard", calendar:"Calendar", analytics:"Analytics", bio:"Bio & Money", alerts:"Alerts", profile:"Profile" };
+
+function initNav() {
+  // Desktop nav
+  document.querySelectorAll('#desktop-nav .nav-item, #drawer-nav .nav-item').forEach(el => {
+    el.addEventListener('click', () => {
+      navigateTo(el.dataset.view);
+      if (el.closest('#drawer-nav')) closeDrawer();
+    });
+  });
+
+  // Bottom nav
+  document.querySelectorAll('#bottom-nav .bnav-item').forEach(el => {
+    el.addEventListener('click', () => navigateTo(el.dataset.view));
+  });
+}
+
+function navigateTo(view) {
+  currentView = view;
+
+  // Views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const vEl = document.getElementById('view-' + view);
+  if (vEl) { vEl.classList.add('active'); vEl.classList.remove('fade-up'); void vEl.offsetWidth; vEl.classList.add('fade-up'); }
+
+  // Desktop nav
+  document.querySelectorAll('#desktop-nav .nav-item, #drawer-nav .nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+
+  // Bottom nav
+  document.querySelectorAll('#bottom-nav .bnav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+
+  // FAB: show only on calendar
+  document.getElementById('fab').style.display = (view === 'calendar' && isMobile()) ? 'flex' : 'none';
+
+  // Mobile title
+  document.getElementById('mobile-page-title').textContent = PAGE_TITLES[view] || 'CreatorHub';
+
+  // Scroll to top
+  document.getElementById('main').scrollTop = 0;
+}
+
+let currentView = 'home';
+
+function openDrawer() {
+  document.getElementById('drawer-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden'; // prevent background scroll
+}
+function closeDrawer() {
+  document.getElementById('drawer-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function closeOnboarding() {
+  document.getElementById('onboarding-banner').classList.remove('show');
+}
+
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('new-post-title').focus();
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+/* ══════════════════════════════════════
+   RENDER ALL
+══════════════════════════════════════ */
+function renderAll() {
+  renderBestTimes();
+  renderBadges();
+  renderTopPosts();
+  renderCalendar();
+  renderUpcoming();
+  renderPlatformCards();
+  renderAlerts();
+  renderPrefs();
+  renderBioLinks();
+  renderBioPreview();
+  renderRevenue();
+  renderConnectedAccounts();
+  renderAppPrefs();
+  renderPlatLegend();
+  initCharts();
+}
+
+/* ══════════════════════════════════════
+   CHARTS (Chart.js)
+══════════════════════════════════════ */
+const CHART_DEFAULTS = {
+  plugins: { legend: { display: false }, tooltip: {
+    backgroundColor: '#231810', borderColor: '#3D2D1C', borderWidth: 1,
+    titleColor: '#F2E8D5', bodyColor: '#A88B6A', padding: 10, cornerRadius: 10,
+  }},
+  scales: {
+    x: { grid: { color: '#2A1E14' }, ticks: { color: '#6B5240', font: { family: 'Sora', size: 11 } }, border: { display: false } },
+    y: { grid: { color: '#2A1E14' }, ticks: { color: '#6B5240', font: { family: 'Sora', size: 11 } }, border: { display: false } },
+  },
+  animation: { duration: 700, easing: 'easeInOutQuart' },
+  responsive: true, maintainAspectRatio: false,
+};
+
+let charts = {};
+
+function initCharts() {
+  if (charts.growth) { Object.values(charts).forEach(c => c.destroy()); charts = {}; }
+
+  // Growth chart
+  charts.growth = new Chart(document.getElementById('chart-growth'), {
+    type: 'line',
+    data: {
+      labels: FOLLOWER_DATA.labels,
+      datasets: [
+        { data: FOLLOWER_DATA.instagram, borderColor: '#E1306C', backgroundColor: 'rgba(225,48,108,0.12)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#E1306C', borderWidth: 2 },
+        { data: FOLLOWER_DATA.tiktok,    borderColor: '#69C9D0', backgroundColor: 'rgba(105,201,208,0.1)',  fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#69C9D0', borderWidth: 2 },
+      ]
+    },
+    options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, ticks: { ...CHART_DEFAULTS.scales.y.ticks, callback: v => fmt(v) } } } }
+  });
+
+  // Engagement bar chart
+  charts.engagement = new Chart(document.getElementById('chart-engagement'), {
+    type: 'bar',
+    data: {
+      labels: ENG_DATA.map(d => d.d),
+      datasets: [{
+        data: ENG_DATA.map(d => d.r),
+        backgroundColor: ENG_DATA.map(d => d.r >= 7 ? '#F0A500' : d.r >= 5 ? '#C4813A' : '#2E1F13'),
+        borderRadius: 6, borderSkipped: false,
+      }]
+    },
+    options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, ticks: { ...CHART_DEFAULTS.scales.y.ticks, callback: v => v + '%' } } } }
+  });
+
+  // Analytics breakdown
+  charts.breakdown = new Chart(document.getElementById('chart-eng-breakdown'), {
+    type: 'bar',
+    data: {
+      labels: ENG_DATA.map(d => d.d),
+      datasets: [
+        { label:'Likes',    data: ENG_DATA.map(d=>d.l), backgroundColor:'#C4813A', borderRadius:4, borderSkipped:false },
+        { label:'Comments', data: ENG_DATA.map(d=>d.c), backgroundColor:'#F0A500', borderRadius:4, borderSkipped:false },
+        { label:'Shares',   data: ENG_DATA.map(d=>d.s), backgroundColor:'#2E1F13', borderRadius:4, borderSkipped:false },
+      ]
+    },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
+  });
+
+  // All-platform growth
+  charts.allGrowth = new Chart(document.getElementById('chart-all-growth'), {
+    type: 'line',
+    data: {
+      labels: FOLLOWER_DATA.labels,
+      datasets: [
+        { data: FOLLOWER_DATA.instagram, borderColor:'#E1306C', tension:0.4, pointRadius:3, pointBackgroundColor:'#E1306C', borderWidth:2, fill:false },
+        { data: FOLLOWER_DATA.tiktok,    borderColor:'#69C9D0', tension:0.4, pointRadius:3, pointBackgroundColor:'#69C9D0', borderWidth:2, fill:false },
+        { data: FOLLOWER_DATA.youtube,   borderColor:'#FF4040', tension:0.4, pointRadius:3, pointBackgroundColor:'#FF4040', borderWidth:2, fill:false },
+        { data: FOLLOWER_DATA.twitter,   borderColor:'#1DA1F2', tension:0.4, pointRadius:3, pointBackgroundColor:'#1DA1F2', borderWidth:2, fill:false },
+      ]
+    },
+    options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, ticks: { ...CHART_DEFAULTS.scales.y.ticks, callback: v => fmt(v) } } } }
+  });
+
+  // Revenue donut
+  charts.revenue = new Chart(document.getElementById('chart-revenue'), {
+    type: 'doughnut',
+    data: {
+      labels: MONEY_DATA.map(m => m.name),
+      datasets: [{ data: MONEY_DATA.map(m => m.v), backgroundColor: MONEY_DATA.map(m => m.color), borderWidth: 3, borderColor: '#1A130C', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 700 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor:'#231810', borderColor:'#3D2D1C', borderWidth:1, titleColor:'#F2E8D5', bodyColor:'#A88B6A', padding:10, cornerRadius:10,
+          callbacks: { label: ctx => ` $${ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2})}` }
+        }
+      },
+      cutout: '60%',
+    }
+  });
+}
+
+/* ══════════════════════════════════════
+   DASHBOARD RENDERS
+══════════════════════════════════════ */
+function renderBestTimes() {
+  const el = document.getElementById('best-times-list');
+  el.innerHTML = BEST_TIMES.map(t => `
+    <div class="time-row">
+      <span class="time-label">${t.h}</span>
+      <div class="time-bar-bg">
+        <div class="time-bar-fill" style="width:${t.s}%;background:${t.s>=80?'var(--amber)':t.s>=60?'var(--brown)':'var(--bg4)'}"></div>
+      </div>
+      ${t.s >= 88 ? `<span class="badge b-amber" style="font-size:9px;padding:2px 7px">Best</span>` : '<div style="width:40px"></div>'}
+    </div>
+  `).join('');
+}
+
+function renderBadges() {
+  const el = document.getElementById('badges-grid');
+  let html = BADGES.map(b => `
+    <div class="badge-card">
+      <div class="badge-emoji">${b.icon}</div>
+      <div class="badge-name">${b.label}</div>
+      <div class="badge-desc">${b.desc}</div>
+    </div>
+  `).join('');
+  html += `<div class="badge-card locked"><div class="badge-emoji" style="opacity:0.3">🔒</div><div class="badge-name" style="color:var(--t3)">Locked</div><div class="badge-desc">Keep posting</div></div>`;
+  el.innerHTML = html;
+}
+
+function renderTopPosts() {
+  const el = document.getElementById('top-posts-list');
+  el.innerHTML = TOP_POSTS.map((p, i) => `
+    <div class="post-row">
+      <span class="badge ${i===0?'b-amber':'b-brown'} post-rank">#${i+1}</span>
+      <div class="post-info">
+        <div class="post-title">${p.title}</div>
+        <div class="post-meta">
+          <span class="post-platform" style="color:${pColor(p.platform)}">${pIcon(p.platform)} ${p.platform}</span>
+          <span class="post-date">${p.date}</span>
+        </div>
+      </div>
+      <div class="post-stats">
+        <div class="post-views">${fmt(p.views)}</div>
+        <div class="post-eng" style="color:${p.eng>=10?'var(--success)':'var(--t3)'}">${p.eng}% eng</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════
+   CALENDAR
+══════════════════════════════════════ */
+let draggedPostId = null;
+
+function renderPlatLegend() {
+  const el = document.getElementById('plat-legend');
+  const plats = ['instagram','tiktok','youtube','twitter'];
+  el.innerHTML = plats.map(p => `
+    <div style="display:flex;align-items:center;gap:5px">
+      <div class="plat-dot" style="background:${pColor(p)}"></div>
+      <span class="plat-label">${p}</span>
+    </div>
+  `).join('');
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const firstDay = new Date(2026, 2, 1).getDay();
+  const daysInMonth = 31;
+  let html = '';
+
+  // Empty cells
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+  // Day cells
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `2026-03-${String(day).padStart(2,'0')}`;
+    const dayPosts = POSTS.filter(p => p.date === dateStr);
+    const isToday  = day === 1;
+
+    html += `
+      <div class="cal-cell${isToday?' today':''}" data-date="${dateStr}"
+        ondragover="event.preventDefault()"
+        ondrop="dropPost(event,'${dateStr}')"
+        ondragenter="this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')">
+        <div class="cal-num">${day}</div>
+        ${dayPosts.slice(0,2).map(post => `
+          <div class="post-chip"
+            draggable="true"
+            ondragstart="draggedPostId='${post.id}'"
+            ondragend="draggedPostId=null"
+            style="background:${pColor(post.platform)}22;border:1px solid ${pColor(post.platform)}44;color:${pColor(post.platform)}"
+            title="${post.title}">
+            ${isMobile() ? pIcon(post.platform) : pIcon(post.platform)+' '+post.title}
+          </div>
+        `).join('')}
+        ${dayPosts.length > 2 ? `<div class="more-chip">+${dayPosts.length-2}</div>` : ''}
+      </div>
+    `;
+  }
+  grid.innerHTML = html;
+}
+
+function dropPost(event, newDate) {
+  event.currentTarget.classList.remove('drag-over');
+  if (!draggedPostId) return;
+  POSTS = POSTS.map(p => p.id === draggedPostId ? {...p, date: newDate} : p);
+  // BACKEND: PUT /api/posts/:draggedPostId { scheduledAt: newDate }
+  renderCalendar();
+  renderUpcoming();
+}
+
+function renderUpcoming() {
+  const el = document.getElementById('upcoming-list');
+  const sorted = [...POSTS].sort((a,b) => a.date.localeCompare(b.date)).slice(0,6);
+  el.innerHTML = sorted.map(post => `
+    <div class="upcoming-item">
+      <div class="upcoming-dot" style="background:${pColor(post.platform)}"></div>
+      <div class="upcoming-info">
+        <div class="upcoming-title">${post.title}</div>
+        <div class="upcoming-date">${post.date} · ${post.time}</div>
+      </div>
+      <span class="badge ${post.status==='scheduled'?'b-green':'b-brown'}">${post.status}</span>
+      <button class="delete-chip-btn" onclick="deletePost('${post.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function addPost() {
+  const title    = document.getElementById('new-post-title').value.trim();
+  const platform = document.getElementById('new-post-platform').value;
+  const date     = document.getElementById('new-post-date').value;
+  const time     = document.getElementById('new-post-time').value;
+  const status   = document.getElementById('new-post-status').value;
+  if (!title || !date) return;
+
+  POSTS.push({ id:'p'+Date.now(), title, platform, date, time, status });
+  // BACKEND: POST /api/posts { title, platform, scheduledAt: date+' '+time, status }
+  closeModal();
+  renderCalendar();
+  renderUpcoming();
+  document.getElementById('new-post-title').value = '';
+  document.getElementById('new-post-date').value  = '';
+}
+
+function deletePost(id) {
+  POSTS = POSTS.filter(p => p.id !== id);
+  // BACKEND: DELETE /api/posts/:id
+  renderCalendar();
+  renderUpcoming();
+}
+
+/* ══════════════════════════════════════
+   ANALYTICS
+══════════════════════════════════════ */
+function renderPlatformCards() {
+  const el = document.getElementById('analytics-plat-cards');
+  el.innerHTML = USER.accounts.map(a => `
+    <div class="card plat-card">
+      <div class="plat-card-top">
+        <span class="plat-card-icon">${pIcon(a.platform)}</span>
+        <span class="plat-card-name" style="color:${a.color}">${a.platform}</span>
+      </div>
+      <div class="stat-num plat-card-num">${fmt(a.followers)}</div>
+      <div class="plat-card-sub">followers</div>
+      <div class="plat-prog-bg">
+        <div class="plat-prog-fill" style="width:${Math.min(a.followers/40000*100,100)}%;background:${a.color}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setPlatFilter(btn, plat) {
+  document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // BACKEND: GET /api/analytics/growth?platform=plat → re-fetch and re-render
+}
+
+/* ══════════════════════════════════════
+   BIO
+══════════════════════════════════════ */
+function renderBioLinks() {
+  const el = document.getElementById('links-list');
+  el.innerHTML = BIO_LINKS.map(l => `
+    <div class="link-item">
+      <span class="link-icon">${l.icon}</span>
+      <div class="link-info">
+        <div class="link-label">${l.label}</div>
+        <div class="link-url">${l.url}</div>
+      </div>
+      <button class="link-del" onclick="deleteLink(${l.id})">✕</button>
+    </div>
+  `).join('');
+  renderBioPreview();
+}
+
+function renderBioPreview() {
+  const bioText = document.getElementById('bio-text')?.value || USER.bio;
+  const el = document.getElementById('bio-preview');
+  el.innerHTML = `
+    <div class="bio-prev-avatar">J</div>
+    <div class="bio-prev-name">${USER.name}</div>
+    <div class="bio-prev-bio">${bioText.replace(/\n/g,'<br>')}</div>
+    ${BIO_LINKS.map(l => `
+      <div class="bio-prev-link"><span>${l.icon}</span> ${l.label}</div>
+    `).join('')}
+  `;
+}
+
+function addLink() {
+  const icon  = document.getElementById('new-link-icon').value.trim()  || '🔗';
+  const label = document.getElementById('new-link-label').value.trim();
+  const url   = document.getElementById('new-link-url').value.trim();
+  if (!label || !url) return;
+  BIO_LINKS.push({ id: Date.now(), icon, label, url });
+  // BACKEND: PUT /api/bio { links: BIO_LINKS }
+  renderBioLinks();
+  document.getElementById('new-link-icon').value  = '';
+  document.getElementById('new-link-label').value = '';
+  document.getElementById('new-link-url').value   = '';
+}
+
+function deleteLink(id) {
+  BIO_LINKS = BIO_LINKS.filter(l => l.id !== id);
+  renderBioLinks();
+}
+
+async function saveBio() {
+  const btn = document.getElementById('bio-save-btn');
+  btn.textContent = '✓ Saved!';
+  // BACKEND: PUT /api/bio { bioText, links: BIO_LINKS }
+  await sleep(1800);
+  btn.textContent = 'Save Changes';
+}
+
+function renderRevenue() {
+  const el = document.getElementById('revenue-breakdown');
+  el.innerHTML = MONEY_DATA.map(m => `
+    <div class="revenue-item">
+      <div class="rev-dot-label">
+        <div class="rev-dot" style="background:${m.color}"></div>
+        <span class="rev-label">${m.name}</span>
+      </div>
+      <span class="rev-value">$${m.v.toLocaleString('en-US',{minimumFractionDigits:2})}</span>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════
+   ALERTS
+══════════════════════════════════════ */
+const ALERT_COLORS = { high:'var(--success)', low:'var(--danger)', milestone:'var(--amber)' };
+const ALERT_ICONS  = { high:'📈', low:'📉', milestone:'🎉' };
+
+function renderAlerts() {
+  const el = document.getElementById('alerts-list');
+  if (!ALERTS.length) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:50px 20px"><div style="font-size:40px;margin-bottom:10px">🔔</div><p style="color:var(--t3)">No alerts. All caught up!</p></div>`;
+    return;
+  }
+  el.innerHTML = ALERTS.map(a => `
+    <div class="alert-card" style="border-left:3px solid ${ALERT_COLORS[a.type]}">
+      <span class="alert-emoji">${ALERT_ICONS[a.type]}</span>
+      <div class="alert-body">
+        <div class="alert-msg">${a.msg}</div>
+        <div class="alert-meta">
+          <span style="color:${pColor(a.platform)};font-size:11px;font-weight:600">${pIcon(a.platform)} ${a.platform}</span>
+          <span style="color:var(--t3);font-size:11px">${a.time}</span>
+        </div>
+      </div>
+      <div class="alert-right">
+        <span class="badge ${a.type==='low'?'b-red':'b-green'}">${a.type}</span>
+        <button class="alert-dismiss" onclick="dismissAlert(${a.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function dismissAlert(id) {
+  ALERTS = ALERTS.filter(a => a.id !== id);
+  // BACKEND: DELETE /api/alerts/:id
+  renderAlerts();
+}
+
+function renderPrefs() {
+  const el = document.getElementById('prefs-list');
+  el.innerHTML = PREFS.map((p, i) => `
+    <div class="pref-row" ${i===PREFS.length-1?'style="border-bottom:none"':''}>
+      <span class="pref-icon">${p.icon}</span>
+      <div class="pref-body">
+        <div class="pref-title">${p.label}</div>
+        <div class="pref-desc">${p.desc}</div>
+      </div>
+      <button class="toggle ${p.on?'on':'off'}" onclick="togglePref(this,'${p.k}')"></button>
+    </div>
+  `).join('');
+}
+
+function togglePref(btn, key) {
+  const p = PREFS.find(x => x.k === key);
+  if (p) { p.on = !p.on; btn.className = 'toggle ' + (p.on ? 'on' : 'off'); }
+  // BACKEND: PUT /api/users/notifications { [key]: p.on }
+}
+
+/* ══════════════════════════════════════
+   PROFILE
+══════════════════════════════════════ */
+function switchProfileTab(tab, btn) {
+  ['info','accounts','settings'].forEach(t => {
+    document.getElementById('profile-tab-'+t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('prof-save-btn');
+  btn.textContent = '✓ Saved!';
+  // BACKEND: PUT /api/users/profile { name, email, username, bio }
+  await sleep(1800);
+  btn.textContent = 'Save Changes';
+}
+
+function renderConnectedAccounts() {
+  const el = document.getElementById('connected-accounts-list');
+  let html = USER.accounts.map(a => `
+    <div class="account-item">
+      <span class="account-icon">${pIcon(a.platform)}</span>
+      <div class="account-info">
+        <div class="account-plat">${a.platform}</div>
+        <div class="account-handle">${a.handle} · ${fmt(a.followers)} followers</div>
+      </div>
+      <span class="badge b-green">Connected</span>
+      <button class="btn btn-g btn-sm">Remove</button>
+    </div>
+  `).join('');
+  ['linkedin','pinterest'].forEach(p => {
+    html += `
+      <div class="account-item disconnected">
+        <span class="account-icon">📱</span>
+        <div class="account-info">
+          <div class="account-plat" style="color:var(--t2)">${p}</div>
+          <div class="account-handle">Not connected</div>
+        </div>
+        <button class="btn btn-g btn-sm">+ Connect</button>
+      </div>
+    `;
+  });
+  el.innerHTML = html;
+}
+
+function renderAppPrefs() {
+  const el = document.getElementById('app-prefs-list');
+  el.innerHTML = APP_PREFS.map((p, i) => `
+    <div class="pref-row" ${i===APP_PREFS.length-1?'style="border-bottom:none"':''}>
+      <span class="pref-icon">${p.icon}</span>
+      <div class="pref-body">
+        <div class="pref-title">${p.label}</div>
+        <div class="pref-desc">${p.desc}</div>
+      </div>
+      <button class="toggle ${p.on?'on':'off'}" onclick="toggleAppPref(this,'${p.k}')"></button>
+    </div>
+  `).join('');
+}
+
+function toggleAppPref(btn, key) {
+  const p = APP_PREFS.find(x => x.k === key);
+  if (p) { p.on = !p.on; btn.className = 'toggle ' + (p.on ? 'on' : 'off'); }
+}
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Auto-login if remembered
+  if (localStorage.getItem('ch_auth')) {
+    bootApp();
+  }
+
+  // Resize: toggle FAB visibility
+  window.addEventListener('resize', () => {
+    const fab = document.getElementById('fab');
+    if (fab) fab.style.display = (currentView === 'calendar' && isMobile()) ? 'flex' : 'none';
+  });
+});
+</script>
+</body>
+</html>
