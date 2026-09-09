@@ -1,8 +1,7 @@
 {
-  "name": "creatorhub",
+  "name": "creovah",
   "version": "1.0.0",
   "private": true,
-  "description": "CreatorHub full-stack Phase 1 - Express serves the frontend and API.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
