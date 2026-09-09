@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0A0806">
+  <title>CreatorHub — Get started</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="onboarding.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <main class="onboarding-shell">
+    <header class="topbar">
+      <a href="../index.html" class="brand"><span class="brand-mark">C</span><span>CreatorHub</span></a>
+      <span class="step-counter" id="stepCounter">1 of 6</span>
+    </header>
+
+    <div class="progress"><span id="progressBar"></span></div>
+
+    <section class="onboarding-card">
+      <div class="intro">
+        <span class="eyebrow" id="eyebrow">WELCOME</span>
+        <h1 id="title">Let's get you set up.</h1>
+        <p id="subtitle">Create your CreatorHub account. It only takes a minute.</p>
+      </div>
+
+      <form id="onboardingForm" novalidate>
+        <div class="step active" data-step="1">
+          <div class="fields">
+            <label>Full name<input id="name" autocomplete="name" placeholder="e.g. Zibvh" required></label>
+            <label>Username<div class="input-prefix"><span>@</span><input id="username" autocomplete="username" placeholder="yourusername" required></div><small id="usernameHint">Your public CreatorHub handle.</small></label>
+            <label>Email address<input id="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+            <label>Phone number<input id="phone" type="tel" autocomplete="tel" placeholder="+234 800 000 0000" required></label>
+          </div>
+          <button class="primary full" type="button" data-next>Continue →</button>
+          <p class="legal">By continuing, you agree to CreatorHub's Terms and Privacy Policy.</p>
+        </div>
+
+        <div class="step" data-step="2">
+          <div class="verify-icon">✉</div>
+          <h2>Check your email.</h2>
+          <p class="step-copy">We sent a 6-digit verification code to <strong id="emailPreview">you@example.com</strong>.</p>
+          <div class="otp" id="otpInputs">
+            <input maxlength="1" inputmode="numeric" aria-label="Digit 1"><input maxlength="1" inputmode="numeric" aria-label="Digit 2"><input maxlength="1" inputmode="numeric" aria-label="Digit 3"><input maxlength="1" inputmode="numeric" aria-label="Digit 4"><input maxlength="1" inputmode="numeric" aria-label="Digit 5"><input maxlength="1" inputmode="numeric" aria-label="Digit 6">
+          </div>
+          <button class="primary full" type="button" data-next id="verifyBtn">Verify email</button>
+          <button class="secondary full" type="button" id="resendBtn">Resend code</button>
+          <p class="hint" id="resendHint">Didn't get it? Check spam or resend.</p>
+        </div>
+
+        <div class="step" data-step="3">
+          <div class="question-list">
+            <div class="question"><label>What best describes what you do?</label><div class="choices" data-choice="role">
+              <button type="button">Influencer / Creator</button><button type="button">Business owner</button><button type="button">Social media manager</button><button type="button">Musician / Producer</button><button type="button">Developer</button><button type="button">Agency</button><button type="button">Other</button>
+            </div></div>
+            <div class="question"><label>Where did you find CreatorHub?</label><div class="choices" data-choice="source">
+              <button type="button">TikTok</button><button type="button">Instagram</button><button type="button">X</button><button type="button">YouTube</button><button type="button">Friend / Referral</button><button type="button">Google</button><button type="button">Other</button>
+            </div></div>
+          </div>
+          <button class="primary full" type="button" data-next>Continue →</button>
+        </div>
+
+        <div class="step" data-step="4">
+          <div class="social-intro"><span class="social-orb">◎</span><h2>Connect your socials.</h2><p>CreatorHub needs access to publish and schedule content on your behalf. You can connect more later.</p></div>
+          <div class="socials">
+            <button type="button" class="social" data-social="Instagram"><span class="social-icon ig">IG</span><span><strong>Instagram</strong><small>Posts & scheduling</small></span><b>Connect</b></button>
+            <button type="button" class="social" data-social="Facebook"><span class="social-icon fb">f</span><span><strong>Facebook</strong><small>Pages & scheduling</small></span><b>Connect</b></button>
+            <button type="button" class="social" data-social="TikTok"><span class="social-icon tt">♪</span><span><strong>TikTok</strong><small>Videos & scheduling</small></span><b>Connect</b></button>
+          </div>
+          <p class="hint center">You can skip this for now and connect accounts from your dashboard.</p>
+          <button class="primary full" type="button" data-next>Continue →</button>
+        </div>
+
+        <div class="step" data-step="5">
+          <div class="notify-card">
+            <div class="notify-icon">♢</div>
+            <h2>Don't miss a post.</h2>
+            <p>Get notified when a post goes live, fails to publish, or needs your attention.</p>
+            <div class="permission-status" id="permissionStatus">Notifications are currently off.</div>
+          </div>
+          <button class="primary full" type="button" id="notifyBtn">Allow notifications</button>
+          <button class="secondary full" type="button" data-next>Not now</button>
+        </div>
+
+        <div class="step" data-step="6">
+          <div class="done-icon">✓</div>
+          <span class="eyebrow">YOU'RE READY</span>
+          <h2>Welcome to CreatorHub, <span id="namePreview">creator</span>.</h2>
+          <p class="step-copy">Your workspace is ready. Create your first post and stop posting the same content manually everywhere.</p>
+          <div class="summary" id="summary"></div>
+          <a class="primary full button-link" href="../index.html">Go to dashboard →</a>
+        </div>
+      </form>
+
+      <div class="back-row"><button type="button" id="backBtn">← Back</button></div>
+    </section>
+  </main>
+  <script src="onboarding.js"></script>
+<script>window.addEventListener("DOMContentLoaded", () => lucide.createIcons());</script>
+</body>
+</html>
