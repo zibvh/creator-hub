@@ -1,1 +1,68 @@
-<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Creovah</title><script src="https://unpkg.com/lucide@latest"></script><link rel="stylesheet" href="/css/styles.css"></head><body><main><aside><h2>Creovah</h2><nav><a href="#"><i data-lucide="layout-dashboard"></i> Dashboard</a><a href="/onboarding/"><i data-lucide="user-plus"></i> Onboarding</a><a href="#"><i data-lucide="calendar-days"></i> Schedule</a><a href="#"><i data-lucide="settings"></i> Settings</a></nav></aside><section class="dashboard"><div class="top"><div><small>WORKSPACE</small><h1>Welcome to Creovah</h1><p>Plan, schedule and publish your content across your social platforms.</p></div><button onclick="location.href='/onboarding/'"><i data-lucide="plus"></i> Create post</button></div><div class="cards"><article><i data-lucide="calendar-clock"></i><strong>0</strong><span>Scheduled</span></article><article><i data-lucide="send"></i><strong>0</strong><span>Published</span></article><article><i data-lucide="circle-alert"></i><strong>0</strong><span>Needs attention</span></article></div></section></main><script>lucide.createIcons()</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f5f1">
+<meta name="description" content="Creovah helps creators plan, publish and manage their social content from one place.">
+<title>creovah — Create once. Go everywhere.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="/"><span>creovah</span></a>
+  <nav class="nav-links">
+    <a href="#features">Features</a><a href="#workflow">How it works</a><a href="#security">Security</a>
+  </nav>
+  <div class="nav-actions"><a class="text-btn" href="/auth.html">Sign in</a><a class="primary-btn small" href="/onboarding/">Get started <i data-lucide="arrow-up-right"></i></a></div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="hero-copy">
+    <div class="eyebrow"><span class="live-dot"></span> Built for people who publish</div>
+    <h1>One idea.<br><em>Everywhere.</em></h1>
+    <p class="hero-text">Creovah gives creators one calm place to plan, prepare and publish content across their social platforms.</p>
+    <div class="hero-actions"><a class="primary-btn" href="/onboarding/">Start creating <i data-lucide="arrow-right"></i></a><a class="ghost-btn" href="#workflow">See how it works <i data-lucide="play-circle"></i></a></div>
+    <div class="proof"><div class="avatars"><span>J</span><span>A</span><span>M</span><span>+</span></div><span>Made for the people behind the posts.</span></div>
+  </div>
+  <div class="hero-visual">
+    <div class="window">
+      <div class="window-top"><span class="window-brand">creovah</span><div class="window-dots"><b></b><b></b><b></b></div></div>
+      <div class="mock-body">
+        <aside><div class="mock-item active"><i data-lucide="layout-dashboard"></i> Overview</div><div class="mock-item"><i data-lucide="calendar-days"></i> Calendar</div><div class="mock-item"><i data-lucide="files"></i> Content</div><div class="mock-item"><i data-lucide="bar-chart-3"></i> Analytics</div></aside>
+        <div class="mock-main"><div class="mock-head"><div><small>MONDAY, SEPTEMBER 14</small><h3>Good morning, creator.</h3></div><span class="mock-avatar">Z</span></div><div class="stat-grid"><div><span>Scheduled</span><strong>12</strong><small>this week</small></div><div><span>Published</span><strong>28</strong><small>this month</small></div><div><span>Reach</span><strong>84.6k</strong><small>+18.4%</small></div></div><div class="mock-card"><div class="card-title"><span>Upcoming</span><a>View calendar</a></div><div class="post-row"><div class="thumb one"></div><div><b>Behind the scenes</b><small>Instagram · Today, 6:30 PM</small></div><span class="status">Scheduled</span></div><div class="post-row"><div class="thumb two"></div><div><b>Build in public — week 04</b><small>Facebook · Tomorrow, 10:00 AM</small></div><span class="status">Scheduled</span></div></div></div>
+      </div>
+    </div>
+    <div class="float-card"><i data-lucide="send"></i><div><b>Ready to publish</b><span>3 platforms connected</span></div><span class="check"><i data-lucide="check"></i></span></div>
+  </div>
+</section>
+
+<section class="marquee"><span>PLAN</span><i></i><span>CREATE</span><i></i><span>PUBLISH</span><i></i><span>GROW</span><i></i><span>REPEAT</span></section>
+
+<section class="section" id="features">
+  <div class="section-intro"><span class="eyebrow">Everything in one flow</span><h2>Less tab switching.<br>More creating.</h2><p>Creovah is designed around the way creators actually work: idea, content, schedule, publish.</p></div>
+  <div class="feature-grid">
+    <article class="feature-card large"><div class="feature-icon"><i data-lucide="calendar-clock"></i></div><h3>Plan your content</h3><p>See what's coming, move posts around and keep your publishing rhythm clear.</p><div class="mini-calendar"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><b>12</b><b>13</b><b>14</b><b>15</b><b>16</b></div></article>
+    <article class="feature-card"><div class="feature-icon"><i data-lucide="send"></i></div><h3>Publish once</h3><p>Prepare a post once and send it to the platforms you've connected.</p><div class="platforms"><span><i data-lucide="instagram"></i></span><span><i data-lucide="facebook"></i></span><span><i data-lucide="music-2"></i></span></div></article>
+    <article class="feature-card"><div class="feature-icon"><i data-lucide="bar-chart-3"></i></div><h3>Understand your work</h3><p>Keep your publishing history and performance in one view as your account grows.</p><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+  </div>
+</section>
+
+<section class="dark-section" id="workflow">
+  <div class="dark-copy"><span class="eyebrow light">A simpler workflow</span><h2>From blank page<br>to published.</h2><p>No complicated setup. Connect your accounts, bring in your content and let your calendar do the organising.</p><a class="light-btn" href="/onboarding/">Create your account <i data-lucide="arrow-right"></i></a></div>
+  <div class="steps"><div class="step"><span>01</span><div><h3>Set up once</h3><p>Create your workspace and connect the platforms you use.</p></div></div><div class="step"><span>02</span><div><h3>Build your queue</h3><p>Add content and decide where and when each piece should go.</p></div></div><div class="step"><span>03</span><div><h3>Stay consistent</h3><p>Keep your publishing schedule visible without living inside five apps.</p></div></div></div>
+</section>
+
+<section class="trust" id="security"><div><i data-lucide="shield-check"></i><div><b>Your accounts stay yours.</b><span>Creovah is built to keep access scoped to what your connected platforms allow.</span></div></div><div><i data-lucide="lock-keyhole"></i><div><b>Secure authentication.</b><span>Passwords are hashed and sessions use signed authentication tokens.</span></div></div><div><i data-lucide="mail-check"></i><div><b>Verified email.</b><span>Every new account confirms its email before getting access.</span></div></div></section>
+
+<section class="cta"><span class="eyebrow">Your content deserves a better workflow</span><h2>Make creating the hard part.<br>Let Creovah handle the rest.</h2><a class="primary-btn" href="/onboarding/">Get started with Creovah <i data-lucide="arrow-up-right"></i></a></section>
+</main>
+<footer><span class="brand">creovah</span><span>© 2026 Creovah. Built for creators.</span><div><a href="/auth.html">Sign in</a><a href="/onboarding/">Create account</a></div></footer>
+<script>lucide.createIcons();</script>
+</body>
+</html>

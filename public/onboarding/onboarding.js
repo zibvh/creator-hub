@@ -1,13 +1,33 @@
-let userId=null,token=null,role="",source="",socials={instagram:false,facebook:false,tiktok:false},notifications=false;
-const $=id=>document.getElementById(id);const api=async(u,o={})=>{let r=await fetch(u,{headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{})},...o}),d=await r.json();if(!r.ok)throw Error(d.message);return d};
-function step(n){for(let i=1;i<=5;i++)$("s"+i).hidden=i!==n;$("done").hidden=true;$("count").textContent=n+" / 5";$("bar").style.width=n*20+"%";lucide.createIcons()}
-async function register(){try{let b={name:$("name").value,username:$("username").value,email:$("email").value,phone:$("phone").value,password:$("password").value,confirmPassword:$("confirmPassword").value};let d=await api("/api/auth/register",{method:"POST",body:JSON.stringify(b)});userId=d.userId;if(d.devVerificationCode)$("status").textContent="Demo code: "+d.devVerificationCode;step(2)}catch(e){alert(e.message)}}
-async function verify(){try{let d=await api("/api/auth/verify-email",{method:"POST",body:JSON.stringify({userId,code:$("code").value})});token=d.token;localStorage.setItem("creovah_token",token);step(3)}catch(e){$("status").textContent=e.message}}
-async function resend(){try{let d=await api("/api/auth/resend-code",{method:"POST",body:JSON.stringify({userId})});$("status").textContent=d.devVerificationCode?"New demo code: "+d.devVerificationCode:"New code sent."}catch(e){$("status").textContent=e.message}}
-function choiceBox(id,cb){let vals=$(id).textContent.split("|");$(id).innerHTML=vals.map(v=>`<button type="button">${v}</button>`).join("");$(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{$(id).querySelectorAll("button").forEach(x=>x.style.borderColor="");b.style.borderColor="#f0a500";cb(b.textContent)})}
-function next(n){if(n===4&&(!role||!source))return alert("Please answer both questions.");if(n===5)saveOnboarding();step(n)}
-async function saveOnboarding(){try{await api("/api/onboarding",{method:"POST",body:JSON.stringify({role,discoverySource:source,socials,notifications})})}catch(e){alert(e.message)}}
-document.querySelectorAll(".social").forEach(b=>b.onclick=()=>{let x=b.dataset.x;socials[x]=!socials[x];b.querySelector("b").textContent=socials[x]?"Connected":"Connect"});
-async function notify(){if(!("Notification"in window))return finish();notifications=await Notification.requestPermission()==="granted";$("nstatus").textContent=notifications?"Notifications enabled.":"Notifications remain off.";await saveOnboarding();finish()}
-function finish(){ $("s5").hidden=true;$("done").hidden=false;$("count").textContent="Complete";$("bar").style.width="100%";lucide.createIcons()}
-choiceBox("roles",v=>role=v);choiceBox("sources",v=>source=v);step(1);
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let step=1,userId=null,role="",source="",socials={instagram:false,facebook:false,tiktok:false},resendUntil=0,timerInterval;
+const screens=$$(".screen"), bar=$("#progressBar"), label=$("#stepLabel");
+function render(){screens.forEach(s=>s.classList.toggle("active",Number(s.dataset.step)===step));bar.style.width=(step===6?100:step*20)+"%";label.textContent=step===6?"DONE":String(step).padStart(2,"0")+" / 05";lucide.createIcons()}
+function go(n){step=n;render();window.scrollTo({top:0,behavior:"smooth"})}
+function err(id,msg){$(id).textContent=msg||""}
+async function api(url,opts={}){const r=await fetch(url,opts);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Something went wrong.");return d}
+$$("[data-toggle]").forEach(b=>b.onclick=()=>{const i=$("#password");i.type=i.type==="password"?"text":"password";b.innerHTML=i.type==="password"?'<i data-lucide="eye"></i>':'<i data-lucide="eye-off"></i>';lucide.createIcons()});
+$("#password").oninput=e=>$("#meter").style.width=Math.min(100,(e.target.value.length/12)*100)+"%";
+
+$("#accountForm").onsubmit=async e=>{e.preventDefault();err("#error1");if($("#password").value!==$("#confirm").value)return err("#error1","Passwords do not match.");const btn=e.submitter;btn.disabled=true;try{const d=await api("/api/auth/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("#name").value,username:$("#username").value,email:$("#email").value,phone:$("#phone").value,password:$("#password").value})});userId=d.userId;$("#emailShown").textContent=$("#email").value;go(2);startTimer(60)}catch(x){err("#error1",x.message)}finally{btn.disabled=false}};
+
+const otp=$$(".otp input");otp.forEach((input,i)=>{input.addEventListener("input",()=>{input.value=input.value.replace(/\D/g,"");if(input.value&&i<5)otp[i+1].focus()});input.addEventListener("keydown",e=>{if(e.key==="Backspace"&&!input.value&&i>0)otp[i-1].focus()})});
+$("#verifyForm").onsubmit=async e=>{e.preventDefault();err("#error2");const code=otp.map(x=>x.value).join("");if(code.length!==6)return err("#error2","Enter all 6 digits.");const btn=e.submitter;btn.disabled=true;try{const d=await api("/api/auth/verify-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId,code})});localStorage.setItem("creovah_token",d.token);go(3)}catch(x){err("#error2",x.message)}finally{btn.disabled=false}};
+function startTimer(seconds){resendUntil=Date.now()+seconds*1000;clearInterval(timerInterval);const update=()=>{const left=Math.max(0,Math.ceil((resendUntil-Date.now())/1000));$("#timer").textContent=left?"You can request another code in "+left+"s.":"";$("#resend").disabled=!!left};update();timerInterval=setInterval(update,250)}
+$("#resend").onclick=async()=>{if(Date.now()<resendUntil)return;err("#error2");try{const d=await api("/api/auth/resend-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId})});err("#error2","");startTimer(60)}catch(x){err("#error2",x.message)}};
+
+const roles=[["creator","Creator"],["influencer","Influencer"],["developer","Developer"],["business","Business owner"],["agency","Agency"],["marketer","Marketer"],["student","Student"],["other","Something else"]];
+const sources=[["instagram","Instagram"],["tiktok","TikTok"],["facebook","Facebook"],["google","Google"],["friend","A friend"],["search","Search"],["other","Somewhere else"]];
+function makeChoices(target,data,select){$(target).innerHTML=data.map(([v,t])=>`<button class="choice" type="button" data-value="${v}"><span>${t}</span><i data-lucide="check"></i></button>`).join("");$$(target+" .choice").forEach(b=>b.onclick=()=>{$$(target+" .choice").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");select(b.dataset.value)});lucide.createIcons()}
+makeChoices("#roleChoices",roles,v=>role=v);makeChoices("#sourceChoices",sources,v=>source=v);
+$("#roleNext").onclick=async()=>{if(!role)return err("#error3","Choose one option to continue.");err("#error3");try{await save({role});go(4)}catch(x){err("#error3",x.message)}};
+$("#sourceNext").onclick=async()=>{if(!source)return err("#error4","Choose one option to continue.");err("#error4");try{await save({discoverySource:source});go(5)}catch(x){err("#error4",x.message)}};
+
+$$(".social").forEach(b=>b.onclick=()=>{const key=b.dataset.social;socials[key]=!socials[key];b.classList.toggle("connected",socials[key]);b.querySelector(".state").outerHTML=socials[key]?'<i class="state" data-lucide="check"></i>':'<i class="state" data-lucide="plus"></i>';lucide.createIcons()});
+$("#notifyBtn").onclick=async()=>{if(!("Notification"in window))return;const p=await Notification.requestPermission();if(p==="granted"){$("#notifyBtn").textContent="Allowed";$("#notifyBtn").classList.add("allowed")}};
+
+async function save(body){return api("/api/onboarding",{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+localStorage.getItem("creovah_token")},body:JSON.stringify(body)})}
+async function finishSetup(){await save({socials,notifications:"Notification"in window&&Notification.permission==="granted",complete:true});go(6)}
+$("#finish").onclick=async()=>{err("#error5");try{await finishSetup()}catch(x){err("#error5",x.message)}};
+$("#skip").onclick=async()=>{err("#error5");try{await finishSetup()}catch(x){err("#error5",x.message)}};
+
+const verifyParam=new URLSearchParams(location.search).get("verify");if(verifyParam){userId=verifyParam;$("#emailShown").textContent="your email";go(2)}else render();
