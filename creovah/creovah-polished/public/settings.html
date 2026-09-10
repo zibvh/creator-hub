@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings — creovah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#faf7f2;color:#1c1712;font-family:"Inter",sans-serif}
+.top{height:70px;border-bottom:1px solid #e1dcd4;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#fff}
+.brand{font:800 23px Fraunces;letter-spacing:-1.5px}
+.back{font-size:13px;font-weight:600;color:#777}
+.wrap{max-width:680px;margin:60px auto;padding:0 25px}
+.eyebrow{text-transform:uppercase;letter-spacing:1.5px;font-size:10px;font-weight:800;color:#e8622d}
+h1{font:800 36px Fraunces;letter-spacing:-2px;margin:12px 0 40px}
+.card{background:#fff;border:1px solid #e3ded6;border-radius:13px;padding:26px;margin-bottom:18px}
+.card h2{font:700 17px Fraunces;margin:0 0 6px}
+.card p{color:#8a837a;font-size:13px;line-height:1.6;margin:0 0 18px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #f0ece5}
+.row:first-of-type{border-top:0}
+.row span{font-size:14px;font-weight:600}
+.row small{display:block;color:#8a837a;font-size:12px;font-weight:400;margin-top:2px}
+.btn{border:0;border-radius:8px;padding:11px 16px;font-weight:700;font-size:13px;cursor:pointer}
+.btn.plain{background:#f0ece5;color:#1c1712}
+.btn.danger{background:#e8622d;color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.danger-card{border-color:#f0d3c8}
+.banner{border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;margin-bottom:20px}
+.banner.ok{background:#e7f3ea;color:#1f7a3d}
+.banner.err{background:#fbe9e5;color:#e8622d}
+.confirm-box{margin-top:14px;padding:16px;background:#faf5f0;border-radius:10px;font-size:13px}
+.confirm-box p{margin:0 0 12px;color:#4a453e}
+.confirm-box .actions{display:flex;gap:10px}
+footer{max-width:680px;margin:0 auto;padding:20px 25px 40px;font-size:12px;color:#8a837a}
+footer a{color:#e8622d;font-weight:600;text-decoration:none}
+</style>
+</head>
+<body>
+<header class="top"><span class="brand">creovah</span><a class="back" href="/dashboard.html">← Back to workspace</a></header>
+<main class="wrap">
+  <div id="banner"></div>
+  <span class="eyebrow">Settings</span>
+  <h1>Your account.</h1>
+
+  <div class="card">
+    <h2>Profile</h2>
+    <p>Basic information tied to your account.</p>
+    <div class="row"><span>Name</span><span id="fName"></span></div>
+    <div class="row"><span>Username</span><span id="fUsername"></span></div>
+    <div class="row"><span>Email</span><span id="fEmail"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Connected platforms</h2>
+    <p>Manage social connections from your <a href="/dashboard.html">workspace dashboard</a>.</p>
+  </div>
+
+  <div class="card danger-card">
+    <h2>Delete your data</h2>
+    <p>This disconnects any linked Instagram or Facebook accounts immediately and submits a request to permanently delete your creovah account and personal data. This can't be undone.</p>
+    <button class="btn danger" id="requestDeletion">Request data deletion</button>
+    <div class="confirm-box" id="confirmBox" style="display:none">
+      <p>Are you sure? This will disconnect your social accounts now and queue your account for permanent deletion.</p>
+      <div class="actions">
+        <button class="btn danger" id="confirmYes">Yes, delete my data</button>
+        <button class="btn plain" id="confirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>Read our <a href="/privacy.html">Privacy Policy</a> for details on how your data is used and retained.</footer>
+
+<script>
+const t=localStorage.getItem("creovah_token");
+if(!t)location.href="/auth.html";
+
+function showBanner(kind,msg){
+  document.getElementById("banner").innerHTML=`<div class="banner ${kind}">${msg}</div>`;
+}
+
+fetch("/api/me",{headers:{Authorization:"Bearer "+t}}).then(r=>r.json()).then(d=>{
+  if(!d.user)return location.href="/auth.html";
+  document.getElementById("fName").textContent=d.user.name;
+  document.getElementById("fUsername").textContent="@"+d.user.username;
+  document.getElementById("fEmail").textContent=d.user.email;
+  if(d.user.deletionRequested){
+    showBanner("ok","A deletion request is already on file for this account.");
+    document.getElementById("requestDeletion").disabled=true;
+  }
+}).catch(()=>location.href="/auth.html");
+
+const btn=document.getElementById("requestDeletion");
+const box=document.getElementById("confirmBox");
+btn.onclick=()=>{box.style.display="block";btn.style.display="none"};
+document.getElementById("confirmNo").onclick=()=>{box.style.display="none";btn.style.display="inline-block"};
+document.getElementById("confirmYes").onclick=async()=>{
+  const yesBtn=document.getElementById("confirmYes");
+  yesBtn.disabled=true;
+  try{
+    const r=await fetch("/api/account/request-deletion",{method:"POST",headers:{Authorization:"Bearer "+t}});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.message||"Something went wrong.");
+    box.style.display="none";
+    showBanner("ok","Your data deletion request has been received. Connected accounts have been disconnected.");
+  }catch(e){
+    showBanner("err",e.message);
+    yesBtn.disabled=false;
+  }
+};
+</script>
+</body>
+</html>
