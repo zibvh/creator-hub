@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-let step=1,userId=null,role="",source="",socials={instagram:false,facebook:false,tiktok:false},resendUntil=0,timerInterval;
+let step=1,userId=null,role="",source="",resendUntil=0,timerInterval;
 const screens=$$(".screen"), bar=$("#progressBar"), label=$("#stepLabel");
 const stepOrder=[1,3,4,5,6];
 function render(){screens.forEach(s=>s.classList.toggle("active",Number(s.dataset.step)===step));const pos=stepOrder.indexOf(step)+1;bar.style.width=(step===6?100:pos*20)+"%";label.textContent=step===6?"DONE":String(pos).padStart(2,"0")+" / 04";lucide.createIcons()}
@@ -18,12 +18,10 @@ makeChoices("#roleChoices",roles,v=>role=v);makeChoices("#sourceChoices",sources
 $("#roleNext").onclick=async()=>{if(!role)return err("#error3","Choose one option to continue.");err("#error3");try{await save({role});go(4)}catch(x){err("#error3",x.message)}};
 $("#sourceNext").onclick=async()=>{if(!source)return err("#error4","Choose one option to continue.");err("#error4");try{await save({discoverySource:source});go(5)}catch(x){err("#error4",x.message)}};
 
-$$(".social").forEach(b=>b.onclick=()=>{const key=b.dataset.social;socials[key]=!socials[key];b.classList.toggle("connected",socials[key]);b.querySelector(".state").outerHTML=socials[key]?'<i class="state" data-lucide="check"></i>':'<i class="state" data-lucide="plus"></i>';lucide.createIcons()});
 $("#notifyBtn").onclick=async()=>{if(!("Notification"in window))return;const p=await Notification.requestPermission();if(p==="granted"){$("#notifyBtn").textContent="Allowed";$("#notifyBtn").classList.add("allowed")}};
 
 async function save(body){return api("/api/onboarding",{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+localStorage.getItem("creovah_token")},body:JSON.stringify(body)})}
-async function finishSetup(){await save({socials,notifications:"Notification"in window&&Notification.permission==="granted",complete:true});go(6)}
+async function finishSetup(){await save({notifications:"Notification"in window&&Notification.permission==="granted",complete:true});go(6)}
 $("#finish").onclick=async()=>{err("#error5");try{await finishSetup()}catch(x){err("#error5",x.message)}};
-$("#skip").onclick=async()=>{err("#error5");try{await finishSetup()}catch(x){err("#error5",x.message)}};
 
 render();

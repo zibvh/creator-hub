@@ -12,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const JWT_SECRET = process.env.JWT_SECRET || "change-me";
 const publicDir = path.join(__dirname, "..", "public");
-const APP_BASE_URL = process.env.APP_BASE_URL || "https://crenovah.onrender.com";
+const APP_BASE_URL = process.env.APP_BASE_URL || "https://creovah.onrender.com";
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -220,7 +220,6 @@ app.patch("/api/onboarding", auth, async (req, res) => {
 
     if (req.body.role) user.role = req.body.role;
     if (req.body.discoverySource) user.discoverySource = req.body.discoverySource;
-    if (req.body.socials) user.socials = { ...user.socials, ...req.body.socials };
     if (typeof req.body.notifications === "boolean") user.notifications = req.body.notifications;
     if (req.body.complete === true) user.onboardingCompleted = true;
 

@@ -3,66 +3,100 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f7f5f1">
-<meta name="description" content="Creovah helps creators plan, publish and manage their social content from one place.">
-<title>creovah — Create once. Go everywhere.</title>
+<meta name="theme-color" content="#faf7f2">
+<meta name="description" content="Creovah helps creators plan, prepare and publish their content across social platforms from one place.">
+<title>creovah — one queue, every platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 <header class="nav">
-  <a class="brand" href="/"><span>creovah</span></a>
+  <a class="brand" href="/">creovah</a>
   <nav class="nav-links">
-    <a href="#features">Features</a><a href="#workflow">How it works</a><a href="#security">Security</a>
+    <a href="#capabilities">What it does</a><a href="#workflow">How it works</a><a href="#trust">Trust</a>
   </nav>
-  <div class="nav-actions"><a class="text-btn" href="/auth.html">Sign in</a><a class="primary-btn small" href="/onboarding/">Get started <i data-lucide="arrow-up-right"></i></a></div>
+  <div class="nav-actions"><a class="text-btn" href="/auth.html">Sign in</a><a class="primary-btn small" href="/onboarding/">Get started</a></div>
 </header>
 
 <main>
 <section class="hero">
-  <div class="hero-copy">
-    <div class="eyebrow"><span class="live-dot"></span> Built for people who publish</div>
-    <h1>One idea.<br><em>Everywhere.</em></h1>
-    <p class="hero-text">Creovah gives creators one calm place to plan, prepare and publish content across their social platforms.</p>
-    <div class="hero-actions"><a class="primary-btn" href="/onboarding/">Start creating <i data-lucide="arrow-right"></i></a><a class="ghost-btn" href="#workflow">See how it works <i data-lucide="play-circle"></i></a></div>
-    <div class="proof"><div class="avatars"><span>J</span><span>A</span><span>M</span><span>+</span></div><span>Made for the people behind the posts.</span></div>
+  <div class="hero-kicker"><span class="dot"></span> For people who post more than once</div>
+  <h1>Write it once.<br>Send it everywhere it belongs.</h1>
+  <p class="lede">Creovah is a single queue for drafting, scheduling and publishing content across the platforms you actually use — so nothing lives in five different apps at once.</p>
+  <div class="hero-actions">
+    <a class="primary-btn" href="/onboarding/">Start your queue <i data-lucide="arrow-right"></i></a>
+    <a class="ghost-btn" href="#workflow">See how it works</a>
   </div>
-  <div class="hero-visual">
-    <div class="window">
-      <div class="window-top"><span class="window-brand">creovah</span><div class="window-dots"><b></b><b></b><b></b></div></div>
-      <div class="mock-body">
-        <aside><div class="mock-item active"><i data-lucide="layout-dashboard"></i> Overview</div><div class="mock-item"><i data-lucide="calendar-days"></i> Calendar</div><div class="mock-item"><i data-lucide="files"></i> Content</div><div class="mock-item"><i data-lucide="bar-chart-3"></i> Analytics</div></aside>
-        <div class="mock-main"><div class="mock-head"><div><small>MONDAY, SEPTEMBER 14</small><h3>Good morning, creator.</h3></div><span class="mock-avatar">Z</span></div><div class="stat-grid"><div><span>Scheduled</span><strong>12</strong><small>this week</small></div><div><span>Published</span><strong>28</strong><small>this month</small></div><div><span>Reach</span><strong>84.6k</strong><small>+18.4%</small></div></div><div class="mock-card"><div class="card-title"><span>Upcoming</span><a>View calendar</a></div><div class="post-row"><div class="thumb one"></div><div><b>Behind the scenes</b><small>Instagram · Today, 6:30 PM</small></div><span class="status">Scheduled</span></div><div class="post-row"><div class="thumb two"></div><div><b>Build in public — week 04</b><small>Facebook · Tomorrow, 10:00 AM</small></div><span class="status">Scheduled</span></div></div></div>
+
+  <div class="filmstrip-wrap">
+    <div class="filmstrip">
+      <div class="reel">
+        <div class="card"><div class="thumb clay"></div><div class="plat"><i data-lucide="instagram"></i> Instagram</div><b>Behind the scenes at the studio</b><span class="tag draft">Draft</span></div>
+        <div class="card"><div class="thumb pine"></div><div class="plat"><i data-lucide="facebook"></i> Facebook</div><b>New product walkthrough</b><span class="tag live">Published</span></div>
+        <div class="card"><div class="thumb ochre"></div><div class="plat"><i data-lucide="music-2"></i> TikTok</div><b>Week 4 build-in-public</b><span class="tag queued">Scheduled</span></div>
+        <div class="card"><div class="thumb ink"></div><div class="plat"><i data-lucide="instagram"></i> Instagram</div><b>Client testimonial reel</b><span class="tag queued">Scheduled</span></div>
+        <div class="card"><div class="thumb clay"></div><div class="plat"><i data-lucide="facebook"></i> Facebook</div><b>Monthly recap post</b><span class="tag draft">Draft</span></div>
+        <div class="card"><div class="thumb pine"></div><div class="plat"><i data-lucide="music-2"></i> TikTok</div><b>Quick tips carousel</b><span class="tag live">Published</span></div>
       </div>
     </div>
-    <div class="float-card"><i data-lucide="send"></i><div><b>Ready to publish</b><span>3 platforms connected</span></div><span class="check"><i data-lucide="check"></i></span></div>
   </div>
 </section>
 
-<section class="marquee"><span>PLAN</span><i></i><span>CREATE</span><i></i><span>PUBLISH</span><i></i><span>GROW</span><i></i><span>REPEAT</span></section>
-
-<section class="section" id="features">
-  <div class="section-intro"><span class="eyebrow">Everything in one flow</span><h2>Less tab switching.<br>More creating.</h2><p>Creovah is designed around the way creators actually work: idea, content, schedule, publish.</p></div>
-  <div class="feature-grid">
-    <article class="feature-card large"><div class="feature-icon"><i data-lucide="calendar-clock"></i></div><h3>Plan your content</h3><p>See what's coming, move posts around and keep your publishing rhythm clear.</p><div class="mini-calendar"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><b>12</b><b>13</b><b>14</b><b>15</b><b>16</b></div></article>
-    <article class="feature-card"><div class="feature-icon"><i data-lucide="send"></i></div><h3>Publish once</h3><p>Prepare a post once and send it to the platforms you've connected.</p><div class="platforms"><span><i data-lucide="instagram"></i></span><span><i data-lucide="facebook"></i></span><span><i data-lucide="music-2"></i></span></div></article>
-    <article class="feature-card"><div class="feature-icon"><i data-lucide="bar-chart-3"></i></div><h3>Understand your work</h3><p>Keep your publishing history and performance in one view as your account grows.</p><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+<section class="section" id="capabilities">
+  <div class="section-head">
+    <h2>Three things creators need. One place to do them.</h2>
+    <p>Creovah doesn't try to replace how you work — it gives your existing workflow a home.</p>
+  </div>
+  <div class="capability-grid">
+    <article class="capability c-clay">
+      <div class="cap-icon"><i data-lucide="calendar-clock"></i></div>
+      <h3>Plan ahead without losing the thread</h3>
+      <p>See what's coming, drag posts to a new day and keep your publishing rhythm visible at a glance.</p>
+      <div class="mini-calendar"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><b>12</b><b>13</b><b class="today">14</b><b>15</b><b>16</b></div>
+    </article>
+    <article class="capability c-pine">
+      <div class="cap-icon"><i data-lucide="send"></i></div>
+      <h3>Prepare once, publish everywhere</h3>
+      <p>Write a post a single time and send it to every platform you've connected.</p>
+      <div class="platform-row"><span><i data-lucide="instagram"></i></span><span><i data-lucide="facebook"></i></span><span><i data-lucide="music-2"></i></span></div>
+    </article>
+    <article class="capability c-ochre">
+      <div class="cap-icon"><i data-lucide="bar-chart-3"></i></div>
+      <h3>Watch what's actually working</h3>
+      <p>Keep your publishing history in view so you can see what's landing as your audience grows.</p>
+      <div class="pulse-bars"><i style="height:28%"></i><i style="height:50%"></i><i style="height:38%"></i><i style="height:72%"></i><i style="height:55%"></i><i style="height:90%"></i></div>
+    </article>
   </div>
 </section>
 
-<section class="dark-section" id="workflow">
-  <div class="dark-copy"><span class="eyebrow light">A simpler workflow</span><h2>From blank page<br>to published.</h2><p>No complicated setup. Connect your accounts, bring in your content and let your calendar do the organising.</p><a class="light-btn" href="/onboarding/">Create your account <i data-lucide="arrow-right"></i></a></div>
-  <div class="steps"><div class="step"><span>01</span><div><h3>Set up once</h3><p>Create your workspace and connect the platforms you use.</p></div></div><div class="step"><span>02</span><div><h3>Build your queue</h3><p>Add content and decide where and when each piece should go.</p></div></div><div class="step"><span>03</span><div><h3>Stay consistent</h3><p>Keep your publishing schedule visible without living inside five apps.</p></div></div></div>
+<section class="workflow" id="workflow">
+  <div class="workflow-head">
+    <h2>No setup marathon. Just connect and go.</h2>
+    <p>Link the accounts you already post to, bring in what you're working on, and let your queue do the remembering.</p>
+    <a class="light-btn" href="/onboarding/">Create your account <i data-lucide="arrow-right"></i></a>
+  </div>
+  <div class="capabilities-row">
+    <div class="wf-item"><div class="wf-mark"><i data-lucide="link-2"></i></div><h3>Connect your platforms</h3><p>Link Instagram, Facebook and the others you post to, with only the access each one needs.</p></div>
+    <div class="wf-item"><div class="wf-mark"><i data-lucide="layout-grid"></i></div><h3>Build your queue</h3><p>Drop in drafts, decide where each one goes, and adjust timing whenever plans change.</p></div>
+    <div class="wf-item"><div class="wf-mark"><i data-lucide="eye"></i></div><h3>Keep the full picture</h3><p>See what's scheduled, what's live, and what's still a draft — without opening five apps to check.</p></div>
+  </div>
 </section>
 
-<section class="trust" id="security"><div><i data-lucide="shield-check"></i><div><b>Your accounts stay yours.</b><span>Creovah is built to keep access scoped to what your connected platforms allow.</span></div></div><div><i data-lucide="lock-keyhole"></i><div><b>Secure authentication.</b><span>Passwords are hashed and sessions use signed authentication tokens.</span></div></div><div><i data-lucide="mail-check"></i><div><b>Verified email.</b><span>Every new account confirms its email before getting access.</span></div></div></section>
+<section class="trust" id="trust">
+  <div class="trust-item"><div class="t-icon"><i data-lucide="shield-check"></i></div><div><b>Your accounts stay yours</b><span>Connections are scoped to only what each platform allows, and you can disconnect at any time.</span></div></div>
+  <div class="trust-item"><div class="t-icon"><i data-lucide="lock-keyhole"></i></div><div><b>Passwords and tokens are protected</b><span>Passwords are hashed, and access tokens for connected accounts are encrypted at rest.</span></div></div>
+  <div class="trust-item"><div class="t-icon"><i data-lucide="database"></i></div><div><b>You control your data</b><span>Request deletion of your account and data at any time from Settings.</span></div></div>
+</section>
 
-<section class="cta"><span class="eyebrow">Your content deserves a better workflow</span><h2>Make creating the hard part.<br>Let Creovah handle the rest.</h2><a class="primary-btn" href="/onboarding/">Get started with Creovah <i data-lucide="arrow-up-right"></i></a></section>
+<section class="cta">
+  <h2>Give your content one home instead of five.</h2>
+  <a class="primary-btn" href="/onboarding/">Get started with Creovah <i data-lucide="arrow-right"></i></a>
+</section>
 </main>
-<footer><span class="brand">creovah</span><span>© 2026 Creovah. Built for creators.</span><div><a href="/privacy.html">Privacy</a><a href="/auth.html">Sign in</a><a href="/onboarding/">Create account</a></div></footer>
+<footer><span class="brand">creovah</span><span>© 2026 Creovah</span><div><a href="/privacy.html">Privacy</a><a href="/auth.html">Sign in</a><a href="/onboarding/">Create account</a></div></footer>
 <script>lucide.createIcons();</script>
 </body>
 </html>
