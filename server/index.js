@@ -293,15 +293,6 @@ const FB_APP_SECRET = process.env.FB_APP_SECRET;
 const FB_CONFIG_ID = process.env.FB_CONFIG_ID;
 const FB_REDIRECT_URI = process.env.FB_REDIRECT_URI || `${APP_BASE_URL}/api/connections/facebook/callback`;
 const FB_GRAPH_VERSION = "v21.0";
-const FB_SCOPES = [
-  "pages_show_list",
-  "pages_read_engagement",
-  "pages_manage_posts",
-  "instagram_basic",
-  "instagram_content_publish",
-  "business_management"
-].join(",");
-
 // Short-lived, in-memory map of OAuth state -> userId, so we know who to attach
 // the connection to when Facebook redirects back. State expires in 10 minutes.
 const pendingOAuthStates = new Map();
