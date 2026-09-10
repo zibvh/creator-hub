@@ -64,6 +64,7 @@ const userSchema = new mongoose.Schema({
     },
     facebook: {
       connected: { type: Boolean, default: false },
+      fbUserId: String,
       pageId: String,
       pageName: String,
       accessTokenEncrypted: String,
@@ -71,7 +72,9 @@ const userSchema = new mongoose.Schema({
     }
   },
   notifications: { type: Boolean, default: false },
-  onboardingCompleted: { type: Boolean, default: false }
+  onboardingCompleted: { type: Boolean, default: false },
+  deletionRequested: { type: Boolean, default: false },
+  deletionRequestedAt: Date
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
@@ -107,7 +110,8 @@ function safeUser(user) {
       }
     },
     notifications: Boolean(user.notifications),
-    onboardingCompleted: Boolean(user.onboardingCompleted)
+    onboardingCompleted: Boolean(user.onboardingCompleted),
+    deletionRequested: Boolean(user.deletionRequested)
   };
 }
 async function findUserByEmail(email) {
@@ -120,6 +124,9 @@ async function findUserByUsername(username) {
 }
 async function findUserById(id) {
   return User.findById(id);
+}
+async function findUserByFbUserId(fbUserId) {
+  return User.findOne({ "connections.facebook.fbUserId": String(fbUserId) });
 }
 async function saveUser(user) {
   return user.save();
@@ -314,6 +321,12 @@ app.get("/api/connections/facebook/callback", async (req, res) => {
     const userAccessToken = longLivedData.access_token;
     const expiresAt = new Date(Date.now() + (longLivedData.expires_in || 60 * 24 * 60 * 60) * 1000);
 
+    // Fetch the Facebook user's own Graph ID so we can match Meta's automated
+    // Data Deletion Callback (which only gives us this ID) back to this account.
+    const meResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me?fields=id&access_token=${encodeURIComponent(userAccessToken)}`);
+    const meData = await meResp.json();
+    const fbUserId = meData.id || "";
+
     // Step 3: list the Pages this user manages, with a Page access token for each
     const pagesResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me/accounts?access_token=${encodeURIComponent(userAccessToken)}`);
     const pagesData = await pagesResp.json();
@@ -325,6 +338,7 @@ app.get("/api/connections/facebook/callback", async (req, res) => {
     user.connections = user.connections || {};
     user.connections.facebook = {
       connected: true,
+      fbUserId,
       pageId: page.id,
       pageName: page.name,
       accessTokenEncrypted: encryptToken(page.access_token),
@@ -374,6 +388,87 @@ app.post("/api/connections/:platform/disconnect", auth, async (req, res) => {
   } catch {
     res.status(500).json({ message: "Unable to disconnect right now." });
   }
+});
+
+app.post("/api/account/request-deletion", auth, async (req, res) => {
+  try {
+    const user = await findUserById(req.auth.id);
+    if (!user) return res.status(404).json({ message: "Account not found." });
+
+    // Immediately strip stored OAuth tokens and connection data — no reason to
+    // keep that once deletion has been requested, even before full purge.
+    user.connections = {
+      instagram: { connected: false },
+      facebook: { connected: false }
+    };
+    user.socials = { instagram: false, facebook: false, tiktok: false };
+    user.deletionRequested = true;
+    user.deletionRequestedAt = new Date();
+
+    await saveUser(user);
+    res.json({ message: "Your data deletion request has been received.", user: safeUser(user) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to submit your deletion request right now." });
+  }
+});
+
+// --- Meta's automated Data Deletion Request Callback ---
+// Fires when a user removes the app or requests deletion from Facebook's own
+// privacy settings (separate from the in-app "Request data deletion" button
+// above). Meta sends a signed_request identifying the Facebook user; we look
+// up any Creovah account connected via that Facebook Page/Instagram account,
+// strip its connection data, and return a status URL + confirmation code.
+function base64UrlDecode(input) {
+  return Buffer.from(input.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+}
+function parseSignedRequest(signedRequest, appSecret) {
+  const [encodedSig, encodedPayload] = String(signedRequest).split(".");
+  if (!encodedSig || !encodedPayload) return null;
+  const expectedSig = crypto.createHmac("sha256", appSecret).update(encodedPayload).digest();
+  const providedSig = base64UrlDecode(encodedSig);
+  if (expectedSig.length !== providedSig.length || !crypto.timingSafeEqual(expectedSig, providedSig)) return null;
+  return JSON.parse(base64UrlDecode(encodedPayload).toString("utf8"));
+}
+const deletionConfirmations = new Map();
+
+app.post("/api/connections/facebook/data-deletion-callback", express.urlencoded({ extended: true }), async (req, res) => {
+  try {
+    if (!FB_APP_SECRET) return res.status(500).json({ error: "App not configured." });
+    const payload = parseSignedRequest(req.body.signed_request, FB_APP_SECRET);
+    if (!payload) return res.status(403).json({ error: "Invalid signed request." });
+
+    const fbUserId = String(payload.user_id);
+    const confirmationCode = crypto.randomBytes(12).toString("hex");
+
+    const user = await findUserByFbUserId(fbUserId);
+    if (user) {
+      user.connections = { instagram: { connected: false }, facebook: { connected: false } };
+      user.socials = { ...user.socials, instagram: false, facebook: false };
+      await saveUser(user);
+    }
+
+    deletionConfirmations.set(confirmationCode, {
+      fbUserId,
+      matchedUser: Boolean(user),
+      requestedAt: new Date().toISOString(),
+      status: "completed"
+    });
+
+    res.json({
+      url: `${APP_BASE_URL}/api/connections/facebook/deletion-status/${confirmationCode}`,
+      confirmation_code: confirmationCode
+    });
+  } catch (error) {
+    console.error("Data deletion callback error:", error.message);
+    res.status(500).json({ error: "Unable to process deletion request." });
+  }
+});
+
+app.get("/api/connections/facebook/deletion-status/:code", (req, res) => {
+  const record = deletionConfirmations.get(req.params.code);
+  if (!record) return res.status(404).send("Deletion request not found.");
+  res.send(`<!doctype html><html><body style="font-family:sans-serif;max-width:480px;margin:60px auto;padding:0 20px"><h2>Data deletion status</h2><p>Confirmation code: <code>${req.params.code}</code></p><p>Status: ${record.status}</p><p>Requested at: ${record.requestedAt}</p></body></html>`);
 });
 
 app.use(express.static(publicDir));
