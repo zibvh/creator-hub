@@ -285,86 +285,95 @@ app.patch("/api/onboarding", auth, async (req, res) => {
   }
 });
 
-// --- Facebook / Instagram Login for Business connect flow ---
-// The browser launches Meta through the Facebook JS SDK using the Login for
-// Business configuration. The backend never exposes the app secret.
+// --- Facebook / Instagram OAuth connect flow ---
+// Instagram Business/Creator accounts are connected via Facebook Login, then
+// resolved to an Instagram Business Account ID through the chosen Page.
 const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
 const FB_CONFIG_ID = process.env.FB_CONFIG_ID;
 const FB_REDIRECT_URI = process.env.FB_REDIRECT_URI || `${APP_BASE_URL}/api/connections/facebook/callback`;
 const FB_GRAPH_VERSION = "v21.0";
-
-// Public configuration needed by the Facebook JS SDK. App ID and configuration
-// ID are not secrets; the app secret remains server-side only.
-app.get("/api/connections/facebook/config", auth, (req, res) => {
-  if (!FB_APP_ID || !FB_CONFIG_ID) {
-    return res.status(500).json({ message: "Facebook Login for Business is not configured on the server yet." });
-  }
-  res.json({ appId: FB_APP_ID, configId: FB_CONFIG_ID, graphVersion: FB_GRAPH_VERSION });
-});
-
-async function graphJson(url, init) {
-  const response = await fetch(url, init);
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || data.error) {
-    const e = data.error || {};
-    const details = [
-      e.message || "Meta Graph API request failed.",
-      e.code ? `code ${e.code}` : "",
-      e.error_subcode ? `subcode ${e.error_subcode}` : "",
-      e.fbtrace_id ? `trace ${e.fbtrace_id}` : ""
-    ].filter(Boolean).join(" · ");
-    const error = new Error(details);
-    error.meta = e;
-    throw error;
-  }
-  return data;
+// Short-lived, in-memory map of OAuth state -> userId, so we know who to attach
+// the connection to when Facebook redirects back. State expires in 10 minutes.
+const pendingOAuthStates = new Map();
+function createOAuthState(userId) {
+  const state = crypto.randomBytes(16).toString("hex");
+  pendingOAuthStates.set(state, { userId, expiresAt: Date.now() + 10 * 60 * 1000 });
+  return state;
+}
+function consumeOAuthState(state) {
+  const entry = pendingOAuthStates.get(state);
+  pendingOAuthStates.delete(state);
+  if (!entry || entry.expiresAt < Date.now()) return null;
+  return entry.userId;
 }
 
-async function completeFacebookConnection(userId, authorizationCode, suppliedAccessToken = "") {
-  const user = await findUserById(userId);
-  if (!user) throw new Error("Account not found.");
-  if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) throw new Error("Facebook app is not configured on the server yet.");
+// Start Login for Business from the authenticated dashboard.
+// The browser receives the generated URL and navigates to Meta. This keeps the
+// OAuth state on the server and avoids mixing the Facebook JS SDK with the
+// server-side OAuth flow.
+app.get("/api/connections/facebook/start", auth, (req, res) => {
+  try {
+    if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) {
+      return res.status(500).json({ message: "Facebook app is not configured on the server yet." });
+    }
 
-  let accessToken = String(suppliedAccessToken || "");
-  let expiresAt = null;
-
-  if (!accessToken) {
-    if (!authorizationCode) throw new Error("Meta did not return an authorization code.");
-
-    const tokenParams = new URLSearchParams({
+    const state = createOAuthState(req.auth.id);
+    const params = new URLSearchParams({
       client_id: FB_APP_ID,
-      client_secret: FB_APP_SECRET,
-      code: String(authorizationCode)
+      redirect_uri: FB_REDIRECT_URI,
+      config_id: FB_CONFIG_ID,
+      response_type: "code",
+      override_default_response_type: "true",
+      state
     });
 
-    const tokenData = await graphJson(
-      `https://graph.facebook.com/${FB_GRAPH_VERSION}/oauth/access_token?${tokenParams.toString()}`
-    );
+    res.json({
+      url: `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`
+    });
+  } catch (error) {
+    console.error("Facebook OAuth start error:", error);
+    res.status(500).json({ message: "Unable to start the Facebook connection." });
+  }
+});
 
-    accessToken = tokenData.access_token;
-    if (!accessToken) throw new Error("Meta did not return an access token.");
-    expiresAt = tokenData.expires_in
-      ? new Date(Date.now() + Number(tokenData.expires_in) * 1000)
-      : null;
+async function completeFacebookConnection(userId, code) {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("Account not found.");
+
+  const tokenParams = new URLSearchParams({
+    client_id: FB_APP_ID,
+    client_secret: FB_APP_SECRET,
+    code: String(code)
+  });
+
+  const tokenResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/oauth/access_token?${tokenParams.toString()}`);
+  const tokenData = await tokenResp.json();
+  if (!tokenResp.ok || !tokenData.access_token) {
+    throw new Error(tokenData.error?.message || "Token exchange failed.");
   }
 
-  const meData = await graphJson(
-    `https://graph.facebook.com/${FB_GRAPH_VERSION}/me?fields=id&access_token=${encodeURIComponent(accessToken)}`
-  );
+  const accessToken = tokenData.access_token;
+  const expiresAt = tokenData.expires_in
+    ? new Date(Date.now() + Number(tokenData.expires_in) * 1000)
+    : null;
 
-  // Ask for the granted Pages and their Instagram Business accounts in one
-  // Graph request. The selected Login for Business assets are reflected here.
-  const pagesData = await graphJson(
-    `https://graph.facebook.com/${FB_GRAPH_VERSION}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=${encodeURIComponent(accessToken)}`
-  );
+  const meResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me?fields=id&access_token=${encodeURIComponent(accessToken)}`);
+  const meData = await meResp.json();
+  if (!meResp.ok) {
+    throw new Error(meData.error?.message || "Could not read the connected Facebook account.");
+  }
+
+  const pagesResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me/accounts?access_token=${encodeURIComponent(accessToken)}`);
+  const pagesData = await pagesResp.json();
+  if (!pagesResp.ok) {
+    throw new Error(pagesData.error?.message || "Could not list Facebook Pages.");
+  }
 
   const page = (pagesData.data || [])[0];
   if (!page) throw new Error("No Facebook Pages were granted to this connection.");
 
   const pageToken = page.access_token || accessToken;
-  const igAccount = page.instagram_business_account || null;
-
   user.connections = user.connections || {};
   user.connections.facebook = {
     connected: true,
@@ -376,11 +385,24 @@ async function completeFacebookConnection(userId, authorizationCode, suppliedAcc
   };
   user.socials = { ...user.socials, facebook: true };
 
-  if (igAccount?.id) {
+  const igResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/${page.id}?fields=instagram_business_account&access_token=${encodeURIComponent(pageToken)}`);
+  const igData = await igResp.json();
+  if (!igResp.ok) {
+    throw new Error(igData.error?.message || "Could not check the Instagram account linked to this Page.");
+  }
+
+  const igAccountId = igData.instagram_business_account?.id;
+  if (igAccountId) {
+    const igProfileResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/${igAccountId}?fields=username&access_token=${encodeURIComponent(pageToken)}`);
+    const igProfile = await igProfileResp.json();
+    if (!igProfileResp.ok) {
+      throw new Error(igProfile.error?.message || "Could not read the connected Instagram account.");
+    }
+
     user.connections.instagram = {
       connected: true,
-      igBusinessAccountId: igAccount.id,
-      igUsername: igAccount.username || "",
+      igBusinessAccountId: igAccountId,
+      igUsername: igProfile.username || "",
       pageId: page.id,
       accessTokenEncrypted: encryptToken(pageToken),
       tokenExpiresAt: expiresAt
@@ -392,36 +414,27 @@ async function completeFacebookConnection(userId, authorizationCode, suppliedAcc
   }
 
   await saveUser(user);
-  return { instagramConnected: Boolean(igAccount?.id), pageName: page.name || "" };
+  return { instagramConnected: Boolean(igAccountId), pageName: page.name || "" };
 }
 
-// The Facebook JS SDK returns a short-lived authorization code when Login for
-// Business is launched with response_type="code". The code is sent directly
-// to this authenticated endpoint and exchanged server-to-server.
-app.post("/api/connections/facebook/exchange", auth, async (req, res) => {
-  try {
-    const code = String(req.body?.code || "").trim();
-    const accessToken = String(req.body?.accessToken || "").trim();
-    if (!code && !accessToken) return res.status(400).json({ message: "Meta did not return an authorization code." });
+// OAuth callback. Meta must be configured with this exact redirect URI.
+app.get("/api/connections/facebook/callback", async (req, res) => {
+  const redirectToDashboard = (status, reason) =>
+    res.redirect(`/dashboard.html?connect=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ""}`);
 
-    const result = await completeFacebookConnection(req.auth.id, code, accessToken);
-    const user = await findUserById(req.auth.id);
-    res.json({
-      message: result.instagramConnected ? "Facebook and Instagram connected." : "Facebook connected. No Instagram Business account was found on that Page.",
-      user: safeUser(user)
-    });
+  try {
+    const { code, state, error: oauthError } = req.query;
+    if (oauthError) return redirectToDashboard("error", "denied");
+    if (!code || !state) return redirectToDashboard("error", "session-expired");
+
+    const userId = consumeOAuthState(String(state));
+    if (!userId) return redirectToDashboard("error", "session-expired");
+
+    const result = await completeFacebookConnection(userId, String(code));
+    return redirectToDashboard(result.instagramConnected ? "instagram-success" : "facebook-only-success");
   } catch (error) {
-    console.error("Facebook Login for Business exchange error:", error.message);
-    res.status(400).json({
-      message: error.message || "Unable to complete the Facebook connection.",
-      meta: error.meta ? {
-        message: error.meta.message,
-        type: error.meta.type,
-        code: error.meta.code,
-        error_subcode: error.meta.error_subcode,
-        fbtrace_id: error.meta.fbtrace_id
-      } : { message: error.message || "Meta connection failed." }
-    });
+    console.error("Facebook OAuth callback error:", error.message);
+    return redirectToDashboard("error", "unexpected");
   }
 });
 

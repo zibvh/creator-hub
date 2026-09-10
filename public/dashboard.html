@@ -1,147 +1,47 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Workspace — creovah</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
-*{box-sizing:border-box}body{margin:0;background:#faf7f2;color:#1c1712;font-family:Inter,sans-serif}.top{height:70px;border-bottom:1px solid #e1dcd4;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#fff;position:relative}.brand{font:800 23px Fraunces;letter-spacing:-1.5px}.menu-btn{border:1px solid #e3ded6;background:#fff;border-radius:9px;width:40px;height:40px;cursor:pointer}.menu-btn span,.menu-btn span:before,.menu-btn span:after{display:block;width:16px;height:2px;background:#1c1712;position:relative;margin:auto}.menu-btn span:before,.menu-btn span:after{content:"";position:absolute;left:0}.menu-btn span:before{top:-5px}.menu-btn span:after{top:5px}.menu-dropdown{position:absolute;top:60px;right:20px;background:#fff;border:1px solid #e3ded6;border-radius:12px;box-shadow:0 16px 35px #3b33251a;padding:8px;min-width:200px;display:none;z-index:20}.menu-dropdown.open{display:block}.who{padding:10px 12px;font-size:12px;color:#8a837a;border-bottom:1px solid #f0ece5;margin-bottom:6px}.menu-dropdown a,.menu-dropdown button{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px;border-radius:8px;font:600 13px Inter;color:#1c1712;cursor:pointer}.menu-dropdown a:hover,.menu-dropdown button:hover{background:#faf7f2}.signout{color:#e8622d!important}.wrap{max-width:1100px;margin:52px auto;padding:0 25px}.eyebrow{text-transform:uppercase;letter-spacing:1.5px;font-size:10px;font-weight:800;color:#e8622d}.head{display:flex;justify-content:space-between;align-items:end;gap:20px}.head h1{font:800 42px Fraunces;letter-spacing:-2px;margin:12px 0}.new{background:#e8622d;color:#fff;border:0;border-radius:9px;padding:12px 15px;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:35px}.card{background:#fff;border:1px solid #e3ded6;border-radius:13px;padding:22px}.card span{font-size:11px;color:#898279}.card strong{display:block;font:800 28px Fraunces;margin-top:8px}.wide{grid-column:1/-1}.wide h2{font:600 18px Fraunces;margin:0 0 8px}.banner{border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;margin-bottom:20px}.banner.ok{background:#e7f3ea;color:#1f7a3d}.banner.err{background:#fbe9e5;color:#e8622d}.conn-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #ede8e0}.conn-row:last-child{border-bottom:0}.conn-left{display:flex;align-items:center;gap:14px}.conn-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px}.ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.fb{background:#1877f2}.conn-name{font-weight:700;font-size:14px}.conn-sub{font-size:12px;color:#8a837a;margin-top:2px}.conn-btn,.delete-btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;font-size:12px;cursor:pointer}.connect{background:#1c1712;color:#fff}.disconnect,.delete-btn{background:#f0ece5;color:#1c1712}.content-list{display:grid;gap:10px}.content-item{border:1px solid #ece6de;border-radius:10px;padding:15px;display:grid;grid-template-columns:1fr auto;gap:12px}.content-title{font-weight:700;font-size:14px}.content-body{font-size:12px;color:#8a837a;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.pill{font-size:10px!important;color:#6e675f!important;background:#f1ede7;padding:5px 7px;border-radius:999px}.status{font-weight:700}.status.scheduled{color:#a05b12}.status.draft{color:#777}.empty{padding:35px 10px;text-align:center;color:#8a837a}.empty p{font-size:13px}.modal{position:fixed;inset:0;background:#1c171255;display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.modal.open{display:flex}.modal-card{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 60px #0002}.modal-head{display:flex;justify-content:space-between;align-items:start}.modal h2{font:700 25px Fraunces;margin:0}.close{border:0;background:#f0ece5;width:34px;height:34px;border-radius:50%;cursor:pointer}.field{margin-top:18px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}.field input,.field textarea{width:100%;border:1px solid #dcd6ce;border-radius:9px;padding:12px;font:inherit;outline:none}.field textarea{min-height:120px;resize:vertical}.field input:focus,.field textarea:focus{border-color:#e8622d;box-shadow:0 0 0 3px #e8622d14}.checks{display:flex;gap:8px;flex-wrap:wrap}.check{border:1px solid #ddd8d0;background:#fff;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer}.check.on{border-color:#e8622d;background:#f8eee9}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.secondary{border:0;background:#f0ece5;border-radius:9px;padding:12px 15px;font-weight:700;cursor:pointer}.error{color:#b42f28;font-size:12px;margin-top:10px;min-height:17px}.notice-modal{position:fixed;inset:0;background:#1c171266;display:none;align-items:flex-end;justify-content:center;padding:18px;z-index:100}.notice-modal.open{display:flex}.notice-card{width:min(520px,100%);background:#fff;border:1px solid #e3ded6;border-radius:16px;padding:20px;box-shadow:0 24px 70px #0003}.notice-card.ok{border-top:4px solid #2f8f55}.notice-card.err{border-top:4px solid #b42f28}.notice-head{display:flex;align-items:center;justify-content:space-between;gap:15px}.notice-title{font:700 20px Fraunces}.notice-close{border:0;background:#f0ece5;width:34px;height:34px;border-radius:50%;font-size:20px;cursor:pointer}.notice-message{font-size:13px;line-height:1.55;color:#625b53;margin:10px 0 0;white-space:pre-wrap}.notice-action{margin-top:16px;border:0;background:#1c1712;color:#fff;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer}.loading-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-left:5px;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.25}}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{align-items:start;flex-direction:column}.wrap{margin-top:40px}.content-item{grid-template-columns:1fr}.delete-btn{justify-self:start}}
+*{box-sizing:border-box}body{margin:0;background:#faf7f2;color:#1c1712;font-family:Inter,sans-serif}.top{height:70px;border-bottom:1px solid #e1dcd4;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#fff;position:relative}.brand{font:800 23px Fraunces;letter-spacing:-1.5px}.menu-btn{border:1px solid #e3ded6;background:#fff;border-radius:9px;width:40px;height:40px;cursor:pointer}.menu-btn span,.menu-btn span:before,.menu-btn span:after{display:block;width:16px;height:2px;background:#1c1712;position:relative;margin:auto}.menu-btn span:before,.menu-btn span:after{content:"";position:absolute;left:0}.menu-btn span:before{top:-5px}.menu-btn span:after{top:5px}.menu-dropdown{position:absolute;top:60px;right:20px;background:#fff;border:1px solid #e3ded6;border-radius:12px;box-shadow:0 16px 35px #3b33251a;padding:8px;min-width:200px;display:none;z-index:20}.menu-dropdown.open{display:block}.who{padding:10px 12px;font-size:12px;color:#8a837a;border-bottom:1px solid #f0ece5;margin-bottom:6px}.menu-dropdown a,.menu-dropdown button{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px;border-radius:8px;font:600 13px Inter;color:#1c1712;cursor:pointer}.menu-dropdown a:hover,.menu-dropdown button:hover{background:#faf7f2}.signout{color:#e8622d!important}.wrap{max-width:1100px;margin:52px auto;padding:0 25px}.eyebrow{text-transform:uppercase;letter-spacing:1.5px;font-size:10px;font-weight:800;color:#e8622d}.head{display:flex;justify-content:space-between;align-items:end;gap:20px}.head h1{font:800 42px Fraunces;letter-spacing:-2px;margin:12px 0}.new{background:#e8622d;color:#fff;border:0;border-radius:9px;padding:12px 15px;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:35px}.card{background:#fff;border:1px solid #e3ded6;border-radius:13px;padding:22px}.card span{font-size:11px;color:#898279}.card strong{display:block;font:800 28px Fraunces;margin-top:8px}.wide{grid-column:1/-1}.wide h2{font:600 18px Fraunces;margin:0 0 8px}.banner{border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;margin-bottom:20px}.banner.ok{background:#e7f3ea;color:#1f7a3d}.banner.err{background:#fbe9e5;color:#e8622d}.conn-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #ede8e0}.conn-row:last-child{border-bottom:0}.conn-left{display:flex;align-items:center;gap:14px}.conn-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px}.ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.fb{background:#1877f2}.conn-name{font-weight:700;font-size:14px}.conn-sub{font-size:12px;color:#8a837a;margin-top:2px}.conn-btn,.delete-btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;font-size:12px;cursor:pointer}.connect{background:#1c1712;color:#fff}.disconnect,.delete-btn{background:#f0ece5;color:#1c1712}.content-list{display:grid;gap:10px}.content-item{border:1px solid #ece6de;border-radius:10px;padding:15px;display:grid;grid-template-columns:1fr auto;gap:12px}.content-title{font-weight:700;font-size:14px}.content-body{font-size:12px;color:#8a837a;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.pill{font-size:10px!important;color:#6e675f!important;background:#f1ede7;padding:5px 7px;border-radius:999px}.status{font-weight:700}.status.scheduled{color:#a05b12}.status.draft{color:#777}.empty{padding:35px 10px;text-align:center;color:#8a837a}.empty p{font-size:13px}.modal{position:fixed;inset:0;background:#1c171255;display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.modal.open{display:flex}.modal-card{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 60px #0002}.modal-head{display:flex;justify-content:space-between;align-items:start}.modal h2{font:700 25px Fraunces;margin:0}.close{border:0;background:#f0ece5;width:34px;height:34px;border-radius:50%;cursor:pointer}.field{margin-top:18px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}.field input,.field textarea{width:100%;border:1px solid #dcd6ce;border-radius:9px;padding:12px;font:inherit;outline:none}.field textarea{min-height:120px;resize:vertical}.field input:focus,.field textarea:focus{border-color:#e8622d;box-shadow:0 0 0 3px #e8622d14}.checks{display:flex;gap:8px;flex-wrap:wrap}.check{border:1px solid #ddd8d0;background:#fff;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer}.check.on{border-color:#e8622d;background:#f8eee9}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.secondary{border:0;background:#f0ece5;border-radius:9px;padding:12px 15px;font-weight:700;cursor:pointer}.error{color:#b42f28;font-size:12px;margin-top:10px;min-height:17px}.notice-modal{position:fixed;inset:0;background:rgba(28,23,18,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:100;backdrop-filter:blur(4px)}.notice-modal.open{display:flex}.notice-card{width:min(430px,100%);background:#fff;border:1px solid #e3ded6;border-radius:18px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.2);animation:noticeIn .18s ease-out}.notice-card.err{border-top:4px solid #e8622d}.notice-card.ok{border-top:4px solid #2f6b5e}.notice-head{display:flex;justify-content:space-between;align-items:center}.notice-icon{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#f8eee9;color:#e8622d;font-weight:800}.notice-card.ok .notice-icon{background:#e7f3ea;color:#2f6b5e}.notice-close{border:0;background:#f0ece5;width:34px;height:34px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer;color:#5e564e}.notice-title{font:700 24px Fraunces;margin-top:18px;color:#1c1712}.notice-message{font-size:13px;line-height:1.65;color:#6e675f;margin-top:9px;white-space:pre-wrap;word-break:break-word}.notice-action{margin-top:20px;width:100%;border:0;border-radius:10px;padding:12px 15px;background:#1c1712;color:#fff;font-weight:700;cursor:pointer}.notice-card.ok .notice-action{background:#2f6b5e}@keyframes noticeIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}@media(max-width:700px){.grid{grid-template-columns:1fr}.head{align-items:start;flex-direction:column}.wrap{margin-top:40px}.content-item{grid-template-columns:1fr}.delete-btn{justify-self:start}}
 </style></head><body><header class="top"><span class="brand">creovah</span><button class="menu-btn" id="menuBtn" aria-label="Menu"><span></span></button><div class="menu-dropdown" id="menuDropdown"><div class="who" id="menuName"></div><a href="/settings.html">Settings</a><a href="/privacy.html">Privacy Policy</a><button class="signout" id="out">Sign out</button></div></header><main class="wrap"><div id="banner"></div><div class="head"><div><span class="eyebrow">Workspace</span><h1>Your publishing home.</h1></div><button class="new" id="newPost">Create content</button></div><div class="grid"><div class="card"><span>Scheduled</span><strong id="scheduledCount">0</strong></div><div class="card"><span>Published</span><strong id="publishedCount">0</strong></div><div class="card"><span>Connected platforms</span><strong id="connected">0</strong></div><div class="card wide"><h2>Connections</h2><div id="connRows"></div></div><div class="card wide"><h2>Upcoming content</h2><div id="contentList" class="content-list"></div></div></div></main>
-<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><div><span class="eyebrow">New content</span><h2>Create a post.</h2></div><button class="close" id="close">×</button></div><form id="contentForm"><div class="field"><label for="title">Title</label><input id="title" maxlength="120" required placeholder="e.g. Week 4 build-in-public"></div><div class="field"><label for="body">Caption / content</label><textarea id="body" maxlength="5000" placeholder="Write what you want to publish..."></textarea></div><div class="field"><label>Platforms</label><div class="checks"><button type="button" class="check" data-platform="instagram">Instagram</button><button type="button" class="check" data-platform="facebook">Facebook</button><button type="button" class="check" data-platform="tiktok">TikTok</button></div></div><div class="field"><label for="schedule">Schedule (optional)</label><input id="schedule" type="datetime-local"></div><div class="error" id="formError"></div><div class="actions"><button type="button" class="secondary" id="cancel">Cancel</button><button class="new" type="submit">Save content</button></div></form></div></div><div class="notice-modal" id="noticeModal" role="alertdialog" aria-modal="true" aria-labelledby="noticeTitle"><div class="notice-card" id="noticeCard"><div class="notice-head"><div class="notice-title" id="noticeTitle">Notice</div><button class="notice-close" id="noticeClose" aria-label="Close">×</button></div><div class="notice-message" id="noticeMessage"></div><button class="notice-action" id="noticeAction" type="button">Okay</button></div></div>
+<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><div><span class="eyebrow">New content</span><h2>Create a post.</h2></div><button class="close" id="close">×</button></div><form id="contentForm"><div class="field"><label for="title">Title</label><input id="title" maxlength="120" required placeholder="e.g. Week 4 build-in-public"></div><div class="field"><label for="body">Caption / content</label><textarea id="body" maxlength="5000" placeholder="Write what you want to publish..."></textarea></div><div class="field"><label>Platforms</label><div class="checks"><button type="button" class="check" data-platform="instagram">Instagram</button><button type="button" class="check" data-platform="facebook">Facebook</button><button type="button" class="check" data-platform="tiktok">TikTok</button></div></div><div class="field"><label for="schedule">Schedule (optional)</label><input id="schedule" type="datetime-local"></div><div class="error" id="formError"></div><div class="actions"><button type="button" class="secondary" id="cancel">Cancel</button><button class="new" type="submit">Save content</button></div></form></div></div>
+<div class="notice-modal" id="noticeModal" role="alertdialog" aria-modal="true" aria-labelledby="noticeTitle" aria-describedby="noticeMessage">
+  <div class="notice-card" id="noticeCard">
+    <div class="notice-head">
+      <div class="notice-icon" id="noticeIcon">!</div>
+      <button class="notice-close" id="noticeClose" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="notice-title" id="noticeTitle">Something went wrong</div>
+    <div class="notice-message" id="noticeMessage"></div>
+    <button class="notice-action" id="noticeAction" type="button">Okay</button>
+  </div>
+</div>
 <script>
-let fbSdkReady=false;
-let fbSdkError="";
-let fbSdkInitPromise=null;
-let fbSdkLoadTimer=null;
-
-window.fbAsyncInit=function(){
-  fbSdkInitPromise=(async()=>{
-    try{
-      const token=localStorage.getItem("creovah_token");
-      if(!token) throw new Error("Your Creovah session has expired. Please sign in again.");
-      const r=await fetch("/api/connections/facebook/config",{headers:{Authorization:"Bearer "+token}});
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok||!d.appId||!d.configId) throw new Error(d.message||"Facebook Login for Business is not configured correctly on the server.");
-      if(!window.FB||typeof window.FB.init!=="function") throw new Error("Facebook's Login SDK loaded incorrectly. Please refresh and try again.");
-      window.FB.init({appId:d.appId,cookie:true,xfbml:false,autoLogAppEvents:true,version:d.graphVersion||"v21.0"});
-      window.__FB_CONFIG_ID__=String(d.configId);
-      fbSdkReady=true;
-    }catch(e){
-      fbSdkError=e.message||"Facebook Login could not initialize.";
-      console.error("Facebook SDK init failed",e);
-    }
-  })();
-};
-
-fbSdkLoadTimer=setTimeout(()=>{
-  if(!window.FB && !fbSdkError){
-    fbSdkError="Facebook's Login SDK did not load. Check your internet connection, content blockers, or browser settings and try again.";
-  }
-},10000);
-</script><script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script><script>
 const t=localStorage.getItem("creovah_token");if(!t)location.href="/auth.html";const $=id=>document.getElementById(id);let user=null,items=[];
-function banner(kind,msg){const box=$("banner");box.textContent="";const el=document.createElement("div");el.className=`banner ${kind}`;el.textContent=msg;box.appendChild(el);setTimeout(()=>{if(box.contains(el))box.removeChild(el)},4500)}
+function banner(kind,msg){notice(kind,kind==="ok"?"Success":"Something went wrong",msg)}
 function notice(kind,title,msg,action="Okay"){const modal=$("noticeModal"),card=$("noticeCard");card.className=`notice-card ${kind}`;$("noticeTitle").textContent=title;$("noticeMessage").textContent=msg;$("noticeAction").textContent=action;modal.classList.add("open");setTimeout(()=>$("noticeAction").focus(),0)}
 function closeNotice(){$("noticeModal").classList.remove("open")}
 $("noticeClose").onclick=closeNotice;$("noticeAction").onclick=closeNotice;$("noticeModal").onclick=e=>{if(e.target===$("noticeModal"))closeNotice()};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeNotice()});
 function renderConnections(){const rows=[{key:"instagram",cls:"ig",label:"Instagram",sub:user.connections.instagram.connected?"@"+(user.connections.instagram.igUsername||"connected"):"Publish and manage your Instagram Business account"},{key:"facebook",cls:"fb",label:"Facebook",sub:user.connections.facebook.connected?(user.connections.facebook.pageName||"connected"):"Publish to your Facebook Page"}];$("connRows").innerHTML=rows.map(r=>{const c=user.connections[r.key].connected;return `<div class="conn-row"><div class="conn-left"><div class="conn-icon ${r.cls}">${r.label[0]}</div><div><div class="conn-name">${r.label}</div><div class="conn-sub">${r.sub}</div></div></div><button class="conn-btn ${c?"disconnect":"connect"}" data-platform="${r.key}">${c?"Disconnect":"Connect"}</button></div>`}).join("");document.querySelectorAll(".conn-btn").forEach(b=>b.onclick=async()=>{
-  const platform=b.dataset.platform;
   if(b.classList.contains("connect")){
-    if(platform!=="facebook" && platform!=="instagram") return;
     b.disabled=true;
-    const original=b.textContent;
-    b.textContent="Connecting…";
-    let loginTimer=null;
-    let finished=false;
-    const finish=()=>{
-      if(finished)return;
-      finished=true;
-      if(loginTimer)clearTimeout(loginTimer);
-      b.disabled=false;
-      b.textContent=original;
-    };
     try{
-      if(fbSdkInitPromise) await fbSdkInitPromise;
-      else if(!window.FB){
-        await new Promise((resolve,reject)=>{
-          const started=Date.now();
-          const check=()=>{
-            if(window.FB && typeof window.FB.login==="function")return resolve();
-            if(Date.now()-started>10000)return reject(new Error("Facebook's Login SDK did not finish loading. Please refresh the page and try again."));
-            setTimeout(check,200);
-          };
-          check();
-        });
-      }
-      if(fbSdkError) throw new Error(fbSdkError);
-      if(!fbSdkReady || !window.FB || typeof window.FB.login!=="function" || !window.__FB_CONFIG_ID__){
-        throw new Error("Facebook Login is not ready yet. Please wait a second and try again.");
-      }
-
-      await new Promise((resolve)=>{
-        const failAfter=75000;
-        loginTimer=setTimeout(()=>{
-          if(finished)return;
-          finished=true;
-          b.disabled=false;
-          b.textContent=original;
-          notice("err","Facebook Login timed out","Meta did not return a login response within 75 seconds. If no Facebook window appeared, allow pop-ups for creovah.onrender.com and try again. If a Meta window appeared and stayed open, close it and retry.","Close");
-          resolve();
-        },failAfter);
-
-        try{
-          window.FB.login(async function(response){
-            try{
-              if(!response){throw new Error("Meta returned an empty login response.");}
-              console.info("Meta Login for Business response",response);
-              if(!response.authResponse){
-                const metaError=response.error?.message||response.error_message||response.status||"The login was cancelled or Meta did not authorize the account.";
-                throw new Error(metaError);
-              }
-              const code=response.authResponse.code||"";
-              const accessToken=response.authResponse.accessToken||"";
-              if(!code && !accessToken) throw new Error("Meta authorized the account but returned neither an authorization code nor an access token.");
-
-              const r=await fetch("/api/connections/facebook/exchange",{
-                method:"POST",
-                headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},
-                body:JSON.stringify(code?{code}:{accessToken})
-              });
-              const d=await r.json().catch(()=>({}));
-              if(!r.ok){
-                const detail=d.meta?.message||d.message||"Meta rejected the connection.";
-                throw new Error(detail);
-              }
-              if(!d.user) throw new Error("Connection completed, but Creovah did not receive your account details.");
-              user=d.user;
-              renderConnections();
-              updateStats();
-              notice("ok","Connected successfully",d.message||"Facebook and Instagram are connected.");
-            }catch(e){
-              notice("err","Connection failed",e.message||"Unable to complete the Facebook connection.","Close");
-            }finally{
-              finish();
-              resolve();
-            }
-          },{
-            config_id:String(window.__FB_CONFIG_ID__),
-            response_type:"code",
-            override_default_response_type:true
-          });
-        }catch(e){
-          clearTimeout(loginTimer);
-          finish();
-          notice("err","Unable to open Facebook Login",e.message||"Meta's login dialog could not be opened.","Close");
-          resolve();
-        }
-      });
+      const r=await fetch("/api/connections/facebook/start",{headers:{Authorization:"Bearer "+t}});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.message||"Unable to start the Facebook connection.");
+      if(!d.url) throw new Error("Facebook did not provide an authorization URL.");
+      location.href=d.url;
     }catch(e){
-      finish();
-      notice("err","Connection failed",e.message||"Unable to connect Facebook right now.","Close");
+      banner("err",e.message||"Unable to connect Facebook right now.");
+      b.disabled=false;
     }
     return;
   }
   b.disabled=true;
   try{
-    const r=await fetch("/api/connections/"+platform+"/disconnect",{method:"POST",headers:{Authorization:"Bearer "+t}});
+    const r=await fetch("/api/connections/"+b.dataset.platform+"/disconnect",{method:"POST",headers:{Authorization:"Bearer "+t}});
     const d=await r.json();
     if(!r.ok) throw new Error(d.message||"Unable to disconnect right now.");
     if(d.user){user=d.user;renderConnections();updateStats()}else throw new Error("Unable to disconnect right now.");
-  }catch(e){notice("err","Could not disconnect",e.message||"Unable to disconnect right now.","Close");b.disabled=false}
+  }catch(e){notice("err","Could not disconnect",e.message||"Unable to disconnect right now.");b.disabled=false}
 })}
 function updateStats(){$("connected").textContent=Object.values(user.socials||{}).filter(Boolean).length;$("scheduledCount").textContent=items.filter(x=>x.status==="scheduled").length;$("publishedCount").textContent=items.filter(x=>x.status==="published").length}
 function renderContent(){if(!items.length){$("contentList").innerHTML='<div class="empty"><p>Your calendar is clear. Create your first piece of content to start building your queue.</p><button class="new" onclick="openModal()">Add your first post</button></div>';return}$("contentList").innerHTML=items.map(x=>`<div class="content-item"><div><div class="content-title">${esc(x.title)}</div><div class="content-body">${esc(x.body||"No caption yet")}</div><div class="meta">${x.platforms.map(p=>`<span class="pill">${p}</span>`).join("")}<span class="pill status ${x.status}">${x.status}${x.scheduledFor?" · "+new Date(x.scheduledFor).toLocaleString():""}</span></div></div><button class="delete-btn" data-id="${x._id}">Delete</button></div>`).join("");document.querySelectorAll(".delete-btn").forEach(b=>b.onclick=async()=>{if(!confirm("Delete this content?"))return;const r=await fetch("/api/content/"+b.dataset.id,{method:"DELETE",headers:{Authorization:"Bearer "+t}});if(r.ok){items=items.filter(x=>x._id!==b.dataset.id);renderContent();updateStats()}})}
@@ -149,6 +49,6 @@ function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 async function load(){try{const [u,c]=await Promise.all([fetch("/api/me",{headers:{Authorization:"Bearer "+t}}),fetch("/api/content",{headers:{Authorization:"Bearer "+t}})]);if(u.status===401)return location.href="/auth.html";const ud=await u.json(),cd=await c.json();user=ud.user;items=cd.items||[];$("menuName").textContent=user.name;renderConnections();renderContent();updateStats()}catch{banner("err","Unable to load your workspace right now.")}}
 const modal=$("modal");function openModal(){modal.classList.add("open");$("title").focus()}function closeModal(){modal.classList.remove("open");$("contentForm").reset();document.querySelectorAll(".check").forEach(x=>x.classList.remove("on"));$("formError").textContent=""}window.openModal=openModal;$("newPost").onclick=openModal;$("close").onclick=closeModal;$("cancel").onclick=closeModal;modal.onclick=e=>{if(e.target===modal)closeModal()};document.querySelectorAll(".check").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
 $("contentForm").onsubmit=async e=>{e.preventDefault();$("formError").textContent="";const platforms=[...document.querySelectorAll(".check.on")].map(x=>x.dataset.platform);const scheduled=$("schedule").value;const r=await fetch("/api/content",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({title:$("title").value,body:$("body").value,platforms,status:scheduled?"scheduled":"draft",scheduledFor:scheduled?new Date(scheduled).toISOString():null})});const d=await r.json();if(!r.ok)return $("formError").textContent=d.message||"Unable to save.";items.unshift(d.item);items.sort((a,b)=>new Date(a.scheduledFor||a.createdAt)-new Date(b.scheduledFor||b.createdAt));renderContent();updateStats();closeModal();banner("ok",scheduled?"Content scheduled in your workspace.":"Draft saved to your workspace.")};
-const params=new URLSearchParams(location.search);if(params.get("connect")){const status=params.get("connect"),reasons={denied:"You cancelled the connection request.","session-expired":"That connection request expired — please try again.","no-pages-found":"No Facebook Pages were found on that account.","account-not-found":"Account not found.",unexpected:"Something went wrong connecting your account."};banner(status.includes("success")?"ok":"err",status==="instagram-success"?"Instagram connected successfully.":status==="facebook-only-success"?"Facebook connected. No Instagram Business account was found on that Page.":reasons[params.get("reason")]||"Unable to connect.");history.replaceState(null,"","/dashboard.html")}
+const params=new URLSearchParams(location.search);if(params.get("connect")){const status=params.get("connect"),reasons={denied:"You cancelled the connection request.","session-expired":"That connection request expired. Please start the connection again.","no-pages-found":"No Facebook Pages were granted to this connection.","account-not-found":"Your Creovah account could not be found.",unexpected:params.get("message")||"Meta returned an unexpected error while connecting your account."};if(status==="instagram-success")notice("ok","Instagram connected","Facebook and your Instagram Business account are connected.");else if(status==="facebook-only-success")notice("ok","Facebook connected","Facebook connected successfully. No Instagram Business account was found on the selected Page.");else notice("err","Facebook connection failed",reasons[params.get("reason")]||"Unable to connect your account.","Close");history.replaceState(null,"","/dashboard.html")}
 $("menuBtn").onclick=e=>{$("menuDropdown").classList.toggle("open");e.stopPropagation()};document.addEventListener("click",e=>{if(!$('menuDropdown').contains(e.target)&&e.target!==$('menuBtn'))$('menuDropdown').classList.remove('open')});$("out").onclick=()=>{localStorage.removeItem("creovah_token");location.href="/"};load();
 </script></body></html>
