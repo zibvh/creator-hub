@@ -79,6 +79,19 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
+const contentSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  title: { type: String, required: true, trim: true, maxlength: 120 },
+  body: { type: String, default: "", maxlength: 5000 },
+  platforms: { type: [String], default: [] },
+  status: { type: String, enum: ["draft", "scheduled", "published"], default: "draft" },
+  scheduledFor: { type: Date, default: null },
+  createdAt: { type: Date, default: Date.now },
+  publishedAt: { type: Date, default: null }
+}, { timestamps: true });
+
+const Content = mongoose.model("Content", contentSchema);
+
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB connection failed:", err.message));
@@ -202,6 +215,48 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.get("/api/content", auth, async (req, res) => {
+  try {
+    const items = await Content.find({ userId: req.auth.id }).sort({ scheduledFor: 1, createdAt: -1 }).limit(100).lean();
+    res.json({ items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to load your content right now." });
+  }
+});
+
+app.post("/api/content", auth, async (req, res) => {
+  try {
+    const title = String(req.body.title || "").trim();
+    const body = String(req.body.body || "").trim();
+    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => ["instagram", "facebook", "tiktok"].includes(p)) : [];
+    const status = ["draft", "scheduled"].includes(req.body.status) ? req.body.status : "draft";
+    if (!title) return res.status(400).json({ message: "Give your post a title." });
+    if (!platforms.length) return res.status(400).json({ message: "Choose at least one platform." });
+    let scheduledFor = null;
+    if (status === "scheduled") {
+      scheduledFor = new Date(req.body.scheduledFor);
+      if (Number.isNaN(scheduledFor.getTime())) return res.status(400).json({ message: "Choose a valid date and time." });
+      if (scheduledFor <= new Date()) return res.status(400).json({ message: "Scheduled time must be in the future." });
+    }
+    const item = await Content.create({ userId: req.auth.id, title, body, platforms, status, scheduledFor });
+    res.status(201).json({ item });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to save this content right now." });
+  }
+});
+
+app.delete("/api/content/:id", auth, async (req, res) => {
+  try {
+    const item = await Content.findOneAndDelete({ _id: req.params.id, userId: req.auth.id });
+    if (!item) return res.status(404).json({ message: "Content not found." });
+    res.json({ message: "Content deleted." });
+  } catch {
+    res.status(500).json({ message: "Unable to delete this content right now." });
+  }
+});
+
 app.get("/api/me", auth, async (req, res) => {
   const user = await findUserById(req.auth.id);
   if (!user) return res.status(404).json({ message: "Account not found." });
@@ -235,6 +290,7 @@ app.patch("/api/onboarding", auth, async (req, res) => {
 // resolved to an Instagram Business Account ID through the chosen Page.
 const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
+const FB_CONFIG_ID = process.env.FB_CONFIG_ID;
 const FB_REDIRECT_URI = process.env.FB_REDIRECT_URI || `${APP_BASE_URL}/api/connections/facebook/callback`;
 const FB_GRAPH_VERSION = "v21.0";
 const FB_SCOPES = [
@@ -265,7 +321,7 @@ function consumeOAuthState(state) {
 // authenticated via a short-lived token query param instead of a header.
 app.get("/api/connections/facebook/start", async (req, res) => {
   try {
-    if (!FB_APP_ID || !FB_APP_SECRET) return res.status(500).json({ message: "Facebook app is not configured on the server yet." });
+    if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) return res.status(500).json({ message: "Facebook app is not configured on the server yet." });
     const token = String(req.query.token || "");
     let decoded;
     try { decoded = jwt.verify(token, JWT_SECRET); } catch { return res.status(401).json({ message: "Session expired. Please sign in again." }); }
@@ -274,8 +330,9 @@ app.get("/api/connections/facebook/start", async (req, res) => {
     const params = new URLSearchParams({
       client_id: FB_APP_ID,
       redirect_uri: FB_REDIRECT_URI,
-      scope: FB_SCOPES,
+      config_id: FB_CONFIG_ID,
       response_type: "code",
+      override_default_response_type: "true",
       state
     });
     res.redirect(`https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`);
