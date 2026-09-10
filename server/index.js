@@ -332,7 +332,6 @@ app.get("/api/connections/facebook/start", async (req, res) => {
       config_id: FB_CONFIG_ID,
       response_type: "code",
       override_default_response_type: "true",
-      auth_type: "rerequest",
       state
     });
     res.redirect(`https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`);
