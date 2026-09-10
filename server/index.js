@@ -307,7 +307,16 @@ async function graphJson(url, init) {
   const response = await fetch(url, init);
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.error) {
-    throw new Error(data.error?.message || "Meta Graph API request failed.");
+    const e = data.error || {};
+    const details = [
+      e.message || "Meta Graph API request failed.",
+      e.code ? `code ${e.code}` : "",
+      e.error_subcode ? `subcode ${e.error_subcode}` : "",
+      e.fbtrace_id ? `trace ${e.fbtrace_id}` : ""
+    ].filter(Boolean).join(" · ");
+    const error = new Error(details);
+    error.meta = e;
+    throw error;
   }
   return data;
 }
@@ -403,7 +412,16 @@ app.post("/api/connections/facebook/exchange", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Facebook Login for Business exchange error:", error.message);
-    res.status(400).json({ message: error.message || "Unable to complete the Facebook connection." });
+    res.status(400).json({
+      message: error.message || "Unable to complete the Facebook connection.",
+      meta: error.meta ? {
+        message: error.meta.message,
+        type: error.meta.type,
+        code: error.meta.code,
+        error_subcode: error.meta.error_subcode,
+        fbtrace_id: error.meta.fbtrace_id
+      } : { message: error.message || "Meta connection failed." }
+    });
   }
 });
 

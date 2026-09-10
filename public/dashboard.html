@@ -6,14 +6,17 @@
 let fbSdkReady=false;
 let fbSdkError="";
 let fbSdkInitPromise=null;
+let fbSdkLoadTimer=null;
+
 window.fbAsyncInit=function(){
   fbSdkInitPromise=(async()=>{
     try{
       const token=localStorage.getItem("creovah_token");
+      if(!token) throw new Error("Your Creovah session has expired. Please sign in again.");
       const r=await fetch("/api/connections/facebook/config",{headers:{Authorization:"Bearer "+token}});
       const d=await r.json().catch(()=>({}));
-      if(!r.ok||!d.appId||!d.configId) throw new Error(d.message||"Facebook Login is not configured correctly.");
-      if(!window.FB||typeof window.FB.init!=="function") throw new Error("Facebook Login could not initialize in this browser.");
+      if(!r.ok||!d.appId||!d.configId) throw new Error(d.message||"Facebook Login for Business is not configured correctly on the server.");
+      if(!window.FB||typeof window.FB.init!=="function") throw new Error("Facebook's Login SDK loaded incorrectly. Please refresh and try again.");
       window.FB.init({appId:d.appId,cookie:true,xfbml:false,autoLogAppEvents:true,version:d.graphVersion||"v21.0"});
       window.__FB_CONFIG_ID__=String(d.configId);
       fbSdkReady=true;
@@ -23,6 +26,12 @@ window.fbAsyncInit=function(){
     }
   })();
 };
+
+fbSdkLoadTimer=setTimeout(()=>{
+  if(!window.FB && !fbSdkError){
+    fbSdkError="Facebook's Login SDK did not load. Check your internet connection, content blockers, or browser settings and try again.";
+  }
+},10000);
 </script><script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script><script>
 const t=localStorage.getItem("creovah_token");if(!t)location.href="/auth.html";const $=id=>document.getElementById(id);let user=null,items=[];
 function banner(kind,msg){const box=$("banner");box.textContent="";const el=document.createElement("div");el.className=`banner ${kind}`;el.textContent=msg;box.appendChild(el);setTimeout(()=>{if(box.contains(el))box.removeChild(el)},4500)}
@@ -30,50 +39,109 @@ function notice(kind,title,msg,action="Okay"){const modal=$("noticeModal"),card=
 function closeNotice(){$("noticeModal").classList.remove("open")}
 $("noticeClose").onclick=closeNotice;$("noticeAction").onclick=closeNotice;$("noticeModal").onclick=e=>{if(e.target===$("noticeModal"))closeNotice()};
 function renderConnections(){const rows=[{key:"instagram",cls:"ig",label:"Instagram",sub:user.connections.instagram.connected?"@"+(user.connections.instagram.igUsername||"connected"):"Publish and manage your Instagram Business account"},{key:"facebook",cls:"fb",label:"Facebook",sub:user.connections.facebook.connected?(user.connections.facebook.pageName||"connected"):"Publish to your Facebook Page"}];$("connRows").innerHTML=rows.map(r=>{const c=user.connections[r.key].connected;return `<div class="conn-row"><div class="conn-left"><div class="conn-icon ${r.cls}">${r.label[0]}</div><div><div class="conn-name">${r.label}</div><div class="conn-sub">${r.sub}</div></div></div><button class="conn-btn ${c?"disconnect":"connect"}" data-platform="${r.key}">${c?"Disconnect":"Connect"}</button></div>`}).join("");document.querySelectorAll(".conn-btn").forEach(b=>b.onclick=async()=>{
+  const platform=b.dataset.platform;
   if(b.classList.contains("connect")){
-    if(b.dataset.platform!=="facebook" && b.dataset.platform!=="instagram") return;
+    if(platform!=="facebook" && platform!=="instagram") return;
     b.disabled=true;
-    const original=b.textContent; b.textContent="Connecting…";
+    const original=b.textContent;
+    b.textContent="Connecting…";
+    let loginTimer=null;
+    let finished=false;
+    const finish=()=>{
+      if(finished)return;
+      finished=true;
+      if(loginTimer)clearTimeout(loginTimer);
+      b.disabled=false;
+      b.textContent=original;
+    };
     try{
-      if(!window.FB || typeof window.FB.login!=="function"){
-        if(fbSdkInitPromise) await fbSdkInitPromise;
-        else await new Promise(resolve=>setTimeout(resolve,500));
+      if(fbSdkInitPromise) await fbSdkInitPromise;
+      else if(!window.FB){
+        await new Promise((resolve,reject)=>{
+          const started=Date.now();
+          const check=()=>{
+            if(window.FB && typeof window.FB.login==="function")return resolve();
+            if(Date.now()-started>10000)return reject(new Error("Facebook's Login SDK did not finish loading. Please refresh the page and try again."));
+            setTimeout(check,200);
+          };
+          check();
+        });
       }
       if(fbSdkError) throw new Error(fbSdkError);
-      if(!fbSdkReady || !window.FB || typeof window.FB.login!=="function" || !window.__FB_CONFIG_ID__) throw new Error("Facebook Login is still loading. Wait a moment and try again.");
+      if(!fbSdkReady || !window.FB || typeof window.FB.login!=="function" || !window.__FB_CONFIG_ID__){
+        throw new Error("Facebook Login is not ready yet. Please wait a second and try again.");
+      }
+
       await new Promise((resolve)=>{
-        let settled=false;
-        const finish=()=>{if(!settled){settled=true;b.disabled=false;b.textContent=original;resolve();}};
+        const failAfter=75000;
+        loginTimer=setTimeout(()=>{
+          if(finished)return;
+          finished=true;
+          b.disabled=false;
+          b.textContent=original;
+          notice("err","Facebook Login timed out","Meta did not return a login response within 75 seconds. If no Facebook window appeared, allow pop-ups for creovah.onrender.com and try again. If a Meta window appeared and stayed open, close it and retry.","Close");
+          resolve();
+        },failAfter);
+
         try{
           window.FB.login(async function(response){
             try{
-              if(!response){throw new Error("Meta did not return a response. Please try again.");}
-              if(response.status!=="connected" || !response.authResponse){
-                throw new Error("The Facebook connection was cancelled or Meta did not authorize this account.");
+              if(!response){throw new Error("Meta returned an empty login response.");}
+              console.info("Meta Login for Business response",response);
+              if(!response.authResponse){
+                const metaError=response.error?.message||response.error_message||response.status||"The login was cancelled or Meta did not authorize the account.";
+                throw new Error(metaError);
               }
               const code=response.authResponse.code||"";
               const accessToken=response.authResponse.accessToken||"";
-              if(!code && !accessToken) throw new Error("Meta did not return an authorization code.");
-              const r=await fetch("/api/connections/facebook/exchange",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify(code?{code}:{accessToken})});
+              if(!code && !accessToken) throw new Error("Meta authorized the account but returned neither an authorization code nor an access token.");
+
+              const r=await fetch("/api/connections/facebook/exchange",{
+                method:"POST",
+                headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},
+                body:JSON.stringify(code?{code}:{accessToken})
+              });
               const d=await r.json().catch(()=>({}));
-              if(!r.ok) throw new Error(d.message||"Meta rejected the connection. Please check your Facebook/Instagram permissions and try again.");
+              if(!r.ok){
+                const detail=d.meta?.message||d.message||"Meta rejected the connection.";
+                throw new Error(detail);
+              }
               if(!d.user) throw new Error("Connection completed, but Creovah did not receive your account details.");
-              user=d.user;renderConnections();updateStats();notice("ok","Connected successfully",d.message||"Facebook and Instagram are connected.");
-            }catch(e){notice("err","Connection failed",e.message||"Unable to connect Facebook right now.","Close");}
-            finally{finish();}
-          },{config_id:String(window.__FB_CONFIG_ID__),response_type:"code",override_default_response_type:true});
-        }catch(e){notice("err","Unable to open Facebook Login",e.message||"The Facebook Login window could not be opened.","Close");finish();}
+              user=d.user;
+              renderConnections();
+              updateStats();
+              notice("ok","Connected successfully",d.message||"Facebook and Instagram are connected.");
+            }catch(e){
+              notice("err","Connection failed",e.message||"Unable to complete the Facebook connection.","Close");
+            }finally{
+              finish();
+              resolve();
+            }
+          },{
+            config_id:String(window.__FB_CONFIG_ID__),
+            response_type:"code",
+            override_default_response_type:true
+          });
+        }catch(e){
+          clearTimeout(loginTimer);
+          finish();
+          notice("err","Unable to open Facebook Login",e.message||"Meta's login dialog could not be opened.","Close");
+          resolve();
+        }
       });
-    }catch(e){notice("err","Connection failed",e.message||"Unable to connect Facebook right now.","Close");b.disabled=false;b.textContent=original;}
+    }catch(e){
+      finish();
+      notice("err","Connection failed",e.message||"Unable to connect Facebook right now.","Close");
+    }
     return;
   }
   b.disabled=true;
   try{
-    const r=await fetch("/api/connections/"+b.dataset.platform+"/disconnect",{method:"POST",headers:{Authorization:"Bearer "+t}});
+    const r=await fetch("/api/connections/"+platform+"/disconnect",{method:"POST",headers:{Authorization:"Bearer "+t}});
     const d=await r.json();
     if(!r.ok) throw new Error(d.message||"Unable to disconnect right now.");
     if(d.user){user=d.user;renderConnections();updateStats()}else throw new Error("Unable to disconnect right now.");
-  }catch(e){banner("err",e.message);b.disabled=false}
+  }catch(e){notice("err","Could not disconnect",e.message||"Unable to disconnect right now.","Close");b.disabled=false}
 })}
 function updateStats(){$("connected").textContent=Object.values(user.socials||{}).filter(Boolean).length;$("scheduledCount").textContent=items.filter(x=>x.status==="scheduled").length;$("publishedCount").textContent=items.filter(x=>x.status==="published").length}
 function renderContent(){if(!items.length){$("contentList").innerHTML='<div class="empty"><p>Your calendar is clear. Create your first piece of content to start building your queue.</p><button class="new" onclick="openModal()">Add your first post</button></div>';return}$("contentList").innerHTML=items.map(x=>`<div class="content-item"><div><div class="content-title">${esc(x.title)}</div><div class="content-body">${esc(x.body||"No caption yet")}</div><div class="meta">${x.platforms.map(p=>`<span class="pill">${p}</span>`).join("")}<span class="pill status ${x.status}">${x.status}${x.scheduledFor?" · "+new Date(x.scheduledFor).toLocaleString():""}</span></div></div><button class="delete-btn" data-id="${x._id}">Delete</button></div>`).join("");document.querySelectorAll(".delete-btn").forEach(b=>b.onclick=async()=>{if(!confirm("Delete this content?"))return;const r=await fetch("/api/content/"+b.dataset.id,{method:"DELETE",headers:{Authorization:"Bearer "+t}});if(r.ok){items=items.filter(x=>x._id!==b.dataset.id);renderContent();updateStats()}})}
