@@ -27,3 +27,7 @@ Facebook and Instagram are separate connection flows. Configure the current Face
 - `FB_REDIRECT_URI=https://creovah.onrender.com/api/connections/facebook/callback`
 
 The dashboard sends `/api/connections/facebook/start` for Facebook and `/api/connections/instagram/start` for Instagram. The callback uses a one-time server-side OAuth state to finish the correct connection without automatically connecting the other platform.
+
+
+## Facebook Login for Business
+The dashboard uses the Facebook JavaScript SDK Login Button with config_id `1528947972253797`. The SDK returns a one-time authorization code to the authenticated browser session; Creovah exchanges it server-side. Instagram remains a separate connection.
