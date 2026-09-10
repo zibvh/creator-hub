@@ -285,90 +285,109 @@ app.patch("/api/onboarding", auth, async (req, res) => {
   }
 });
 
-// --- Facebook / Instagram OAuth connect flow ---
-// Instagram Business/Creator accounts are connected via Facebook Login, then
-// resolved to an Instagram Business Account ID through the chosen Page.
+// --- Facebook / Instagram OAuth connect flows ---
+// Facebook and Instagram are intentionally separate connections. For the current
+// rollout, Facebook is the only Meta connection being configured. Instagram stays
+// independent and is enabled later with its own configuration ID.
 const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
-const FB_CONFIG_ID = process.env.FB_CONFIG_ID;
+const FB_CONFIG_ID = process.env.FB_CONFIG_ID || "1528947972253797";
+const INSTAGRAM_CONFIG_ID = process.env.INSTAGRAM_CONFIG_ID;
 const FB_REDIRECT_URI = process.env.FB_REDIRECT_URI || `${APP_BASE_URL}/api/connections/facebook/callback`;
 const FB_GRAPH_VERSION = "v21.0";
-// Short-lived, in-memory map of OAuth state -> userId, so we know who to attach
-// the connection to when Facebook redirects back. State expires in 10 minutes.
+
+// Short-lived, in-memory map of OAuth state -> user/platform. State expires in
+// 10 minutes and is consumed once, preventing a callback from being replayed.
 const pendingOAuthStates = new Map();
-function createOAuthState(userId) {
+function createOAuthState(userId, platform) {
   const state = crypto.randomBytes(16).toString("hex");
-  pendingOAuthStates.set(state, { userId, expiresAt: Date.now() + 10 * 60 * 1000 });
+  pendingOAuthStates.set(state, {
+    userId: String(userId),
+    platform,
+    expiresAt: Date.now() + 10 * 60 * 1000
+  });
   return state;
 }
 function consumeOAuthState(state) {
   const entry = pendingOAuthStates.get(state);
   pendingOAuthStates.delete(state);
   if (!entry || entry.expiresAt < Date.now()) return null;
-  return entry.userId;
+  return entry;
 }
 
-// Start Login for Business from the authenticated dashboard.
-// The browser receives the generated URL and navigates to Meta. This keeps the
-// OAuth state on the server and avoids mixing the Facebook JS SDK with the
-// server-side OAuth flow.
+function buildMetaOAuthUrl(configId, state) {
+  const params = new URLSearchParams({
+    client_id: FB_APP_ID,
+    redirect_uri: FB_REDIRECT_URI,
+    config_id: configId,
+    response_type: "code",
+    override_default_response_type: "true",
+    state
+  });
+  return `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
+}
+
+// Start Facebook-only Login for Business. FB_CONFIG_ID is the working Meta
+// Login for Business configuration supplied for the current Facebook rollout.
 app.get("/api/connections/facebook/start", auth, (req, res) => {
   try {
     if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) {
-      return res.status(500).json({ message: "Facebook app is not configured on the server yet." });
+      return res.status(500).json({ message: "Facebook connection is not configured on the server yet." });
     }
-
-    const state = createOAuthState(req.auth.id);
-    const params = new URLSearchParams({
-      client_id: FB_APP_ID,
-      redirect_uri: FB_REDIRECT_URI,
-      config_id: FB_CONFIG_ID,
-      response_type: "code",
-      override_default_response_type: "true",
-      state
-    });
-
-    res.json({
-      url: `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`
-    });
+    const state = createOAuthState(req.auth.id, "facebook");
+    res.json({ url: buildMetaOAuthUrl(FB_CONFIG_ID, state) });
   } catch (error) {
     console.error("Facebook OAuth start error:", error);
     res.status(500).json({ message: "Unable to start the Facebook connection." });
   }
 });
 
+// Instagram remains a separate future flow. Do not reuse the Facebook config for it.
+app.get("/api/connections/instagram/start", auth, (req, res) => {
+  try {
+    if (!FB_APP_ID || !FB_APP_SECRET || !INSTAGRAM_CONFIG_ID) {
+      return res.status(500).json({ message: "Instagram connection is not configured on the server yet." });
+    }
+    const state = createOAuthState(req.auth.id, "instagram");
+    res.json({ url: buildMetaOAuthUrl(INSTAGRAM_CONFIG_ID, state) });
+  } catch (error) {
+    console.error("Instagram OAuth start error:", error);
+    res.status(500).json({ message: "Unable to start the Instagram connection." });
+  }
+});
+
+async function exchangeMetaCode(code) {
+  const tokenParams = new URLSearchParams({
+    client_id: FB_APP_ID,
+    client_secret: FB_APP_SECRET,
+    redirect_uri: FB_REDIRECT_URI,
+    code: String(code)
+  });
+  const tokenResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/oauth/access_token?${tokenParams.toString()}`);
+  const tokenData = await tokenResp.json();
+  if (!tokenResp.ok || !tokenData.access_token) {
+    throw new Error(tokenData.error?.message || "Meta token exchange failed.");
+  }
+  return {
+    accessToken: tokenData.access_token,
+    expiresAt: tokenData.expires_in
+      ? new Date(Date.now() + Number(tokenData.expires_in) * 1000)
+      : null
+  };
+}
+
 async function completeFacebookConnection(userId, code) {
   const user = await findUserById(userId);
   if (!user) throw new Error("Account not found.");
 
-  const tokenParams = new URLSearchParams({
-    client_id: FB_APP_ID,
-    client_secret: FB_APP_SECRET,
-    code: String(code)
-  });
-
-  const tokenResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/oauth/access_token?${tokenParams.toString()}`);
-  const tokenData = await tokenResp.json();
-  if (!tokenResp.ok || !tokenData.access_token) {
-    throw new Error(tokenData.error?.message || "Token exchange failed.");
-  }
-
-  const accessToken = tokenData.access_token;
-  const expiresAt = tokenData.expires_in
-    ? new Date(Date.now() + Number(tokenData.expires_in) * 1000)
-    : null;
-
+  const { accessToken, expiresAt } = await exchangeMetaCode(code);
   const meResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me?fields=id&access_token=${encodeURIComponent(accessToken)}`);
   const meData = await meResp.json();
-  if (!meResp.ok) {
-    throw new Error(meData.error?.message || "Could not read the connected Facebook account.");
-  }
+  if (!meResp.ok) throw new Error(meData.error?.message || "Could not read the connected Facebook account.");
 
   const pagesResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me/accounts?access_token=${encodeURIComponent(accessToken)}`);
   const pagesData = await pagesResp.json();
-  if (!pagesResp.ok) {
-    throw new Error(pagesData.error?.message || "Could not list Facebook Pages.");
-  }
+  if (!pagesResp.ok) throw new Error(pagesData.error?.message || "Could not list Facebook Pages.");
 
   const page = (pagesData.data || [])[0];
   if (!page) throw new Error("No Facebook Pages were granted to this connection.");
@@ -384,57 +403,83 @@ async function completeFacebookConnection(userId, code) {
     tokenExpiresAt: expiresAt
   };
   user.socials = { ...user.socials, facebook: true };
-
-  const igResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/${page.id}?fields=instagram_business_account&access_token=${encodeURIComponent(pageToken)}`);
-  const igData = await igResp.json();
-  if (!igResp.ok) {
-    throw new Error(igData.error?.message || "Could not check the Instagram account linked to this Page.");
-  }
-
-  const igAccountId = igData.instagram_business_account?.id;
-  if (igAccountId) {
-    const igProfileResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/${igAccountId}?fields=username&access_token=${encodeURIComponent(pageToken)}`);
-    const igProfile = await igProfileResp.json();
-    if (!igProfileResp.ok) {
-      throw new Error(igProfile.error?.message || "Could not read the connected Instagram account.");
-    }
-
-    user.connections.instagram = {
-      connected: true,
-      igBusinessAccountId: igAccountId,
-      igUsername: igProfile.username || "",
-      pageId: page.id,
-      accessTokenEncrypted: encryptToken(pageToken),
-      tokenExpiresAt: expiresAt
-    };
-    user.socials = { ...user.socials, instagram: true };
-  } else {
-    user.connections.instagram = { connected: false };
-    user.socials = { ...user.socials, instagram: false };
-  }
-
   await saveUser(user);
-  return { instagramConnected: Boolean(igAccountId), pageName: page.name || "" };
+  return { pageName: page.name || "" };
 }
 
-// OAuth callback. Meta must be configured with this exact redirect URI.
+async function completeInstagramConnection(userId, code) {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("Account not found.");
+
+  const { accessToken, expiresAt } = await exchangeMetaCode(code);
+  const pagesResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me/accounts?access_token=${encodeURIComponent(accessToken)}`);
+  const pagesData = await pagesResp.json();
+  if (!pagesResp.ok) throw new Error(pagesData.error?.message || "Could not list the Pages available to Instagram.");
+
+  let selected = null;
+  let igProfile = null;
+  for (const page of pagesData.data || []) {
+    const pageToken = page.access_token || accessToken;
+    const igResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/${page.id}?fields=instagram_business_account&access_token=${encodeURIComponent(pageToken)}`);
+    const igData = await igResp.json();
+    if (!igResp.ok) continue;
+    const igId = igData.instagram_business_account?.id;
+    if (!igId) continue;
+
+    const profileResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/${igId}?fields=username&access_token=${encodeURIComponent(pageToken)}`);
+    const profileData = await profileResp.json();
+    if (!profileResp.ok) continue;
+
+    selected = { page, pageToken, igId };
+    igProfile = profileData;
+    break;
+  }
+
+  if (!selected) throw new Error("No Instagram Business or Creator account was found on the Pages granted to this connection.");
+
+  user.connections = user.connections || {};
+  user.connections.instagram = {
+    connected: true,
+    igBusinessAccountId: selected.igId,
+    igUsername: igProfile.username || "",
+    pageId: selected.page.id,
+    accessTokenEncrypted: encryptToken(selected.pageToken),
+    tokenExpiresAt: expiresAt
+  };
+  user.socials = { ...user.socials, instagram: true };
+  await saveUser(user);
+  return { igUsername: igProfile.username || "" };
+}
+
+// Both providers return to the same callback URI. The signed-in platform is
+// recovered from the one-time OAuth state, so Facebook never silently creates
+// an Instagram connection and Instagram never marks Facebook connected.
 app.get("/api/connections/facebook/callback", async (req, res) => {
-  const redirectToDashboard = (status, reason) =>
-    res.redirect(`/dashboard.html?connect=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ""}`);
+  const redirectToDashboard = (status, reason, message) => {
+    const params = new URLSearchParams({ connect: status });
+    if (reason) params.set("reason", reason);
+    if (message) params.set("message", String(message).slice(0, 500));
+    return res.redirect(`/dashboard.html?${params.toString()}`);
+  };
 
   try {
-    const { code, state, error: oauthError } = req.query;
-    if (oauthError) return redirectToDashboard("error", "denied");
-    if (!code || !state) return redirectToDashboard("error", "session-expired");
+    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+    const pending = state ? consumeOAuthState(String(state)) : null;
+    if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
+    if (!code || !pending) return redirectToDashboard("error", "session-expired");
 
-    const userId = consumeOAuthState(String(state));
-    if (!userId) return redirectToDashboard("error", "session-expired");
-
-    const result = await completeFacebookConnection(userId, String(code));
-    return redirectToDashboard(result.instagramConnected ? "instagram-success" : "facebook-only-success");
+    if (pending.platform === "facebook") {
+      const result = await completeFacebookConnection(pending.userId, String(code));
+      return redirectToDashboard("facebook-success", null, result.pageName ? `${result.pageName} connected.` : "Facebook connected successfully.");
+    }
+    if (pending.platform === "instagram") {
+      const result = await completeInstagramConnection(pending.userId, String(code));
+      return redirectToDashboard("instagram-success", null, result.igUsername ? `@${result.igUsername} connected.` : "Instagram connected successfully.");
+    }
+    return redirectToDashboard("error", "unexpected", "Unknown connection type.");
   } catch (error) {
-    console.error("Facebook OAuth callback error:", error.message);
-    return redirectToDashboard("error", "unexpected");
+    console.error("Meta OAuth callback error:", error.message);
+    return redirectToDashboard("error", "unexpected", error.message || "Meta returned an unexpected error while connecting your account.");
   }
 });
 

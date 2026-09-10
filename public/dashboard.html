@@ -22,16 +22,20 @@ $("noticeClose").onclick=closeNotice;$("noticeAction").onclick=closeNotice;$("no
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeNotice()});
 function renderConnections(){const rows=[{key:"instagram",cls:"ig",label:"Instagram",sub:user.connections.instagram.connected?"@"+(user.connections.instagram.igUsername||"connected"):"Publish and manage your Instagram Business account"},{key:"facebook",cls:"fb",label:"Facebook",sub:user.connections.facebook.connected?(user.connections.facebook.pageName||"connected"):"Publish to your Facebook Page"}];$("connRows").innerHTML=rows.map(r=>{const c=user.connections[r.key].connected;return `<div class="conn-row"><div class="conn-left"><div class="conn-icon ${r.cls}">${r.label[0]}</div><div><div class="conn-name">${r.label}</div><div class="conn-sub">${r.sub}</div></div></div><button class="conn-btn ${c?"disconnect":"connect"}" data-platform="${r.key}">${c?"Disconnect":"Connect"}</button></div>`}).join("");document.querySelectorAll(".conn-btn").forEach(b=>b.onclick=async()=>{
   if(b.classList.contains("connect")){
+    const platform=b.dataset.platform;
+    const label=platform==="instagram"?"Instagram":"Facebook";
     b.disabled=true;
+    b.textContent="Connecting…";
     try{
-      const r=await fetch("/api/connections/facebook/start",{headers:{Authorization:"Bearer "+t}});
-      const d=await r.json();
-      if(!r.ok) throw new Error(d.message||"Unable to start the Facebook connection.");
-      if(!d.url) throw new Error("Facebook did not provide an authorization URL.");
-      location.href=d.url;
+      const r=await fetch(`/api/connections/${platform}/start`,{headers:{Authorization:"Bearer "+t}});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.message||`Unable to start the ${label} connection.`);
+      if(!d.url) throw new Error(`${label} did not provide an authorization URL.`);
+      location.assign(d.url);
     }catch(e){
-      banner("err",e.message||"Unable to connect Facebook right now.");
+      notice("err",`Could not connect ${label}`,e.message||`Unable to connect ${label} right now.`,`Close`);
       b.disabled=false;
+      b.textContent="Connect";
     }
     return;
   }
@@ -49,6 +53,6 @@ function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 async function load(){try{const [u,c]=await Promise.all([fetch("/api/me",{headers:{Authorization:"Bearer "+t}}),fetch("/api/content",{headers:{Authorization:"Bearer "+t}})]);if(u.status===401)return location.href="/auth.html";const ud=await u.json(),cd=await c.json();user=ud.user;items=cd.items||[];$("menuName").textContent=user.name;renderConnections();renderContent();updateStats()}catch{banner("err","Unable to load your workspace right now.")}}
 const modal=$("modal");function openModal(){modal.classList.add("open");$("title").focus()}function closeModal(){modal.classList.remove("open");$("contentForm").reset();document.querySelectorAll(".check").forEach(x=>x.classList.remove("on"));$("formError").textContent=""}window.openModal=openModal;$("newPost").onclick=openModal;$("close").onclick=closeModal;$("cancel").onclick=closeModal;modal.onclick=e=>{if(e.target===modal)closeModal()};document.querySelectorAll(".check").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
 $("contentForm").onsubmit=async e=>{e.preventDefault();$("formError").textContent="";const platforms=[...document.querySelectorAll(".check.on")].map(x=>x.dataset.platform);const scheduled=$("schedule").value;const r=await fetch("/api/content",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({title:$("title").value,body:$("body").value,platforms,status:scheduled?"scheduled":"draft",scheduledFor:scheduled?new Date(scheduled).toISOString():null})});const d=await r.json();if(!r.ok)return $("formError").textContent=d.message||"Unable to save.";items.unshift(d.item);items.sort((a,b)=>new Date(a.scheduledFor||a.createdAt)-new Date(b.scheduledFor||b.createdAt));renderContent();updateStats();closeModal();banner("ok",scheduled?"Content scheduled in your workspace.":"Draft saved to your workspace.")};
-const params=new URLSearchParams(location.search);if(params.get("connect")){const status=params.get("connect"),reasons={denied:"You cancelled the connection request.","session-expired":"That connection request expired. Please start the connection again.","no-pages-found":"No Facebook Pages were granted to this connection.","account-not-found":"Your Creovah account could not be found.",unexpected:params.get("message")||"Meta returned an unexpected error while connecting your account."};if(status==="instagram-success")notice("ok","Instagram connected","Facebook and your Instagram Business account are connected.");else if(status==="facebook-only-success")notice("ok","Facebook connected","Facebook connected successfully. No Instagram Business account was found on the selected Page.");else notice("err","Facebook connection failed",reasons[params.get("reason")]||"Unable to connect your account.","Close");history.replaceState(null,"","/dashboard.html")}
+const params=new URLSearchParams(location.search);if(params.get("connect")){const status=params.get("connect"),reason=params.get("reason"),message=params.get("message"),reasons={denied:message||"You cancelled the connection request.","session-expired":"That connection request expired. Please start the connection again.",unexpected:message||"Meta returned an unexpected error while connecting your account."};if(status==="instagram-success")notice("ok","Instagram connected",message||"Your Instagram account is connected.");else if(status==="facebook-success")notice("ok","Facebook connected",message||"Your Facebook Page is connected.");else notice("err","Connection failed",reasons[reason]||message||"Unable to connect your account.","Close");history.replaceState(null,"","/dashboard.html")}
 $("menuBtn").onclick=e=>{$("menuDropdown").classList.toggle("open");e.stopPropagation()};document.addEventListener("click",e=>{if(!$('menuDropdown').contains(e.target)&&e.target!==$('menuBtn'))$('menuDropdown').classList.remove('open')});$("out").onclick=()=>{localStorage.removeItem("creovah_token");location.href="/"};load();
 </script></body></html>
