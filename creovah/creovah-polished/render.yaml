@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: creovah
-    runtime: node
-    buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /api/health
