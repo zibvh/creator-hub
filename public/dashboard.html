@@ -13,6 +13,10 @@
     <button class="notice-action" id="noticeAction" type="button">Okay</button>
   </div>
 </div>
+<script id="facebook-jssdk-loader">
+window.fbAsyncInit=function(){ window.__creovahFbReady=true; };
+(function(d,s,id){if(d.getElementById(id))return;var js=d.createElement(s);js.id=id;js.async=true;js.defer=true;js.src="https://connect.facebook.net/en_US/sdk.js";var fjs=d.getElementsByTagName(s)[0];fjs.parentNode.insertBefore(js,fjs)})(document,"script","facebook-jssdk");
+</script>
 <script>
 const t=localStorage.getItem("creovah_token");if(!t)location.href="/auth.html";const $=id=>document.getElementById(id);let user=null,items=[];
 function banner(kind,msg){notice(kind,kind==="ok"?"Success":"Something went wrong",msg)}
@@ -23,30 +27,55 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeNotice()});
 function renderConnections(){const rows=[{key:"instagram",cls:"ig",label:"Instagram",sub:user.connections.instagram.connected?"@"+(user.connections.instagram.igUsername||"connected"):"Publish and manage your Instagram Business account"},{key:"facebook",cls:"fb",label:"Facebook",sub:user.connections.facebook.connected?(user.connections.facebook.pageName||"connected"):"Publish to your Facebook Page"}];$("connRows").innerHTML=rows.map(r=>{const c=user.connections[r.key].connected;return `<div class="conn-row"><div class="conn-left"><div class="conn-icon ${r.cls}">${r.label[0]}</div><div><div class="conn-name">${r.label}</div><div class="conn-sub">${r.sub}</div></div></div><button class="conn-btn ${c?"disconnect":"connect"}" data-platform="${r.key}">${c?"Disconnect":"Connect"}</button></div>`}).join("");document.querySelectorAll(".conn-btn").forEach(b=>b.onclick=async()=>{
   if(b.classList.contains("connect")){
     const platform=b.dataset.platform;
-    const label=platform==="instagram"?"Instagram":"Facebook";
-    b.disabled=true;
-    b.textContent="Connecting…";
-    try{
-      const r=await fetch(`/api/connections/${platform}/start`,{headers:{Authorization:"Bearer "+t}});
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok) throw new Error(d.message||`Unable to start the ${label} connection.`);
-      if(!d.url) throw new Error(`${label} did not provide an authorization URL.`);
-      location.assign(d.url);
-    }catch(e){
-      notice("err",`Could not connect ${label}`,e.message||`Unable to connect ${label} right now.`,`Close`);
-      b.disabled=false;
-      b.textContent="Connect";
-    }
-    return;
+    if(platform==="facebook") return connectFacebookWithSdk(b);
+    const label="Instagram";
+    b.disabled=true;b.textContent="Connecting…";
+    try{const r=await fetch(`/api/connections/${platform}/start`,{headers:{Authorization:"Bearer "+t}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||`Unable to start the ${label} connection.`);if(!d.url)throw new Error(`${label} did not provide an authorization URL.`);location.assign(d.url)}catch(e){notice("err",`Could not connect ${label}`,e.message||`Unable to connect ${label} right now.`,`Close`);b.disabled=false;b.textContent="Connect"}return;
   }
   b.disabled=true;
-  try{
-    const r=await fetch("/api/connections/"+b.dataset.platform+"/disconnect",{method:"POST",headers:{Authorization:"Bearer "+t}});
-    const d=await r.json();
-    if(!r.ok) throw new Error(d.message||"Unable to disconnect right now.");
-    if(d.user){user=d.user;renderConnections();updateStats()}else throw new Error("Unable to disconnect right now.");
-  }catch(e){notice("err","Could not disconnect",e.message||"Unable to disconnect right now.");b.disabled=false}
+  try{const r=await fetch("/api/connections/"+b.dataset.platform+"/disconnect",{method:"POST",headers:{Authorization:"Bearer "+t}});const d=await r.json();if(!r.ok)throw new Error(d.message||"Unable to disconnect right now.");if(d.user){user=d.user;renderConnections();updateStats()}else throw new Error("Unable to disconnect right now.")}catch(e){notice("err","Could not disconnect",e.message||"Unable to disconnect right now.");b.disabled=false}
 })}
+async function waitForFacebookSdk(){
+  const started=Date.now();
+  while(typeof window.FB==="undefined" && Date.now()-started<15000){await new Promise(r=>setTimeout(r,100));}
+  if(typeof window.FB==="undefined")throw new Error("Facebook Login could not load. Check your internet connection or disable any browser content blocker and try again.");
+  const cfgResp=await fetch("/api/connections/facebook/config",{headers:{Authorization:"Bearer "+t}});
+  const cfg=await cfgResp.json().catch(()=>({}));
+  if(!cfgResp.ok)throw new Error(cfg.message||"Facebook connection is not configured on the server.");
+  if(!window.__creovahFbInitialized){
+    FB.init({appId:cfg.appId,cookie:true,xfbml:true,version:cfg.version||"v21.0"});
+    window.__creovahFbInitialized=true;
+  }
+  return cfg;
+}
+async function connectFacebookWithSdk(button){
+  button.disabled=true;button.textContent="Connecting…";
+  try{
+    const cfg=await waitForFacebookSdk();
+    const response=await new Promise((resolve,reject)=>{
+      let settled=false;
+      const finish=value=>{if(settled)return;settled=true;resolve(value)};
+      const timer=setTimeout(()=>{if(settled)return;settled=true;reject(new Error("Facebook Login did not respond. Please try again."))},45000);
+      try{
+        FB.login(result=>{clearTimeout(timer);finish(result)}, {config_id:cfg.configId,response_type:"code",override_default_response_type:true});
+      }catch(error){clearTimeout(timer);reject(error)}
+    });
+    if(!response)throw new Error("Facebook Login returned no response.");
+    if(response.status!=="connected" && !response.authResponse)throw new Error(response.error?.message||"Facebook Login was not completed.");
+    const auth=response.authResponse||{};
+    const payload={code:auth.code||"",accessToken:auth.accessToken||""};
+    if(!payload.code&&!payload.accessToken)throw new Error("Meta did not return an authorization code. Please try the Facebook connection again.");
+    const exchange=await fetch("/api/connections/facebook/sdk-exchange",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify(payload)});
+    const data=await exchange.json().catch(()=>({}));
+    if(!exchange.ok)throw new Error(data.message||"Creovah could not finish the Facebook connection.");
+    if(data.user){user=data.user;renderConnections();updateStats();notice("ok","Facebook connected",data.message||"Your Facebook Page is connected.")}else throw new Error("Facebook connected, but Creovah could not refresh your workspace.");
+  }catch(error){
+    console.error("Facebook connection error",error);
+    notice("err","Could not connect Facebook",error.message||"Facebook Login could not be completed.","Close");
+  }finally{
+    button.disabled=false;button.textContent="Connect";
+  }
+}
 function updateStats(){$("connected").textContent=Object.values(user.socials||{}).filter(Boolean).length;$("scheduledCount").textContent=items.filter(x=>x.status==="scheduled").length;$("publishedCount").textContent=items.filter(x=>x.status==="published").length}
 function renderContent(){if(!items.length){$("contentList").innerHTML='<div class="empty"><p>Your calendar is clear. Create your first piece of content to start building your queue.</p><button class="new" onclick="openModal()">Add your first post</button></div>';return}$("contentList").innerHTML=items.map(x=>`<div class="content-item"><div><div class="content-title">${esc(x.title)}</div><div class="content-body">${esc(x.body||"No caption yet")}</div><div class="meta">${x.platforms.map(p=>`<span class="pill">${p}</span>`).join("")}<span class="pill status ${x.status}">${x.status}${x.scheduledFor?" · "+new Date(x.scheduledFor).toLocaleString():""}</span></div></div><button class="delete-btn" data-id="${x._id}">Delete</button></div>`).join("");document.querySelectorAll(".delete-btn").forEach(b=>b.onclick=async()=>{if(!confirm("Delete this content?"))return;const r=await fetch("/api/content/"+b.dataset.id,{method:"DELETE",headers:{Authorization:"Bearer "+t}});if(r.ok){items=items.filter(x=>x._id!==b.dataset.id);renderContent();updateStats()}})}
 function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}

@@ -327,6 +327,45 @@ function buildMetaOAuthUrl(configId, state) {
   return `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
 }
 
+// Browser SDK configuration. The App ID and Login for Business config ID are public
+// identifiers; the App Secret is never sent to the browser.
+app.get("/api/connections/facebook/config", auth, (req, res) => {
+  if (!FB_APP_ID || !FB_CONFIG_ID) {
+    return res.status(500).json({ message: "Facebook connection is not configured on the server yet." });
+  }
+  res.json({ appId: FB_APP_ID, configId: FB_CONFIG_ID, version: FB_GRAPH_VERSION });
+});
+
+// Complete the Login for Business flow started by the Facebook JavaScript SDK.
+// The browser may receive either a one-time authorization code or an access token,
+// depending on Meta's response mode. Only the code/token is accepted here; the
+// App Secret stays on the server.
+app.post("/api/connections/facebook/sdk-exchange", auth, async (req, res) => {
+  try {
+    if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) {
+      return res.status(500).json({ message: "Facebook connection is not configured on the server yet." });
+    }
+
+    const code = String(req.body?.code || "").trim();
+    const accessToken = String(req.body?.accessToken || "").trim();
+    if (!code && !accessToken) {
+      return res.status(400).json({ message: "Meta did not return an authorization code or access token." });
+    }
+
+    const result = code
+      ? await completeFacebookConnection(req.auth.id, code)
+      : await completeFacebookConnectionWithToken(req.auth.id, accessToken);
+
+    res.json({
+      message: result.pageName ? `${result.pageName} connected.` : "Facebook connected successfully.",
+      user: await safeUser(await findUserById(req.auth.id))
+    });
+  } catch (error) {
+    console.error("Facebook SDK exchange error:", error.message);
+    res.status(400).json({ message: error.message || "Facebook could not complete the connection." });
+  }
+});
+
 // Start Facebook-only Login for Business. FB_CONFIG_ID is the working Meta
 // Login for Business configuration supplied for the current Facebook rollout.
 app.get("/api/connections/facebook/start", auth, (req, res) => {
@@ -374,6 +413,37 @@ async function exchangeMetaCode(code) {
       ? new Date(Date.now() + Number(tokenData.expires_in) * 1000)
       : null
   };
+}
+
+async function completeFacebookConnectionWithToken(userId, accessToken) {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("Account not found.");
+
+  const token = String(accessToken);
+  const meResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me?fields=id&access_token=${encodeURIComponent(token)}`);
+  const meData = await meResp.json();
+  if (!meResp.ok) throw new Error(meData.error?.message || "Could not validate the connected Facebook account.");
+
+  const pagesResp = await fetch(`https://graph.facebook.com/${FB_GRAPH_VERSION}/me/accounts?access_token=${encodeURIComponent(token)}`);
+  const pagesData = await pagesResp.json();
+  if (!pagesResp.ok) throw new Error(pagesData.error?.message || "Could not list Facebook Pages.");
+
+  const page = (pagesData.data || [])[0];
+  if (!page) throw new Error("No Facebook Pages were granted to this connection.");
+
+  const pageToken = page.access_token || token;
+  user.connections = user.connections || {};
+  user.connections.facebook = {
+    connected: true,
+    fbUserId: meData.id || "",
+    pageId: page.id,
+    pageName: page.name || "",
+    accessTokenEncrypted: encryptToken(pageToken),
+    tokenExpiresAt: null
+  };
+  user.socials = { ...user.socials, facebook: true };
+  await saveUser(user);
+  return { pageName: page.name || "" };
 }
 
 async function completeFacebookConnection(userId, code) {
