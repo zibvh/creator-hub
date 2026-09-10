@@ -30,4 +30,4 @@ The dashboard sends `/api/connections/facebook/start` for Facebook and `/api/con
 
 
 ## Facebook Login for Business
-The dashboard uses the Facebook JavaScript SDK Login Button with config_id `1528947972253797`. The SDK returns a one-time authorization code to the authenticated browser session; Creovah exchanges it server-side. Instagram remains a separate connection.
+Facebook uses the JavaScript SDK Login for Business flow with config_id 1528947972253797 and a server-side code exchange. Instagram remains a separate connection and is not invoked by the Facebook button.

@@ -454,6 +454,26 @@ async function completeInstagramConnection(userId, code) {
 // Both providers return to the same callback URI. The signed-in platform is
 // recovered from the one-time OAuth state, so Facebook never silently creates
 // an Instagram connection and Instagram never marks Facebook connected.
+
+// Browser JS SDK Login for Business exchange.
+// The SDK returns a short-lived authorization CODE when response_type=code is used.
+// The code is exchanged server-side; the app secret never reaches the browser.
+app.post("/api/connections/facebook/sdk-exchange", auth, async (req, res) => {
+  try {
+    const code = String(req.body?.code || "").trim();
+    if (!code) return res.status(400).json({ message: "Meta did not return an authorization code." });
+    const result = await completeFacebookConnection(req.auth.id, code);
+    res.json({
+      connected: true,
+      pageName: result.pageName || "",
+      message: result.pageName ? `${result.pageName} connected.` : "Facebook connected successfully."
+    });
+  } catch (error) {
+    console.error("Facebook SDK exchange error:", error.message);
+    res.status(400).json({ message: error.message || "Facebook connection could not be completed." });
+  }
+});
+
 app.get("/api/connections/facebook/callback", async (req, res) => {
   const redirectToDashboard = (status, reason, message) => {
     const params = new URLSearchParams({ connect: status });
@@ -480,27 +500,6 @@ app.get("/api/connections/facebook/callback", async (req, res) => {
   } catch (error) {
     console.error("Meta OAuth callback error:", error.message);
     return redirectToDashboard("error", "unexpected", error.message || "Meta returned an unexpected error while connecting your account.");
-  }
-});
-
-// Facebook Login for Business via the JavaScript SDK.
-// The browser receives a one-time authorization code from FB.login(). It sends
-// that code here over the authenticated Creovah session; the App Secret never
-// reaches the browser.
-app.post("/api/connections/facebook/sdk-exchange", auth, async (req, res) => {
-  try {
-    if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) {
-      return res.status(500).json({ message: "Facebook connection is not configured on the server yet." });
-    }
-    const code = String(req.body?.code || "").trim();
-    if (!code) return res.status(400).json({ message: "Meta did not return an authorization code." });
-
-    const result = await completeFacebookConnection(req.auth.id, code);
-    const user = await findUserById(req.auth.id);
-    return res.json({ ok: true, message: result.pageName ? `${result.pageName} connected.` : "Facebook connected successfully.", user: safeUser(user) });
-  } catch (error) {
-    console.error("Facebook SDK exchange error:", error);
-    return res.status(400).json({ message: error.message || "Unable to complete the Facebook connection." });
   }
 });
 
