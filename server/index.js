@@ -455,24 +455,9 @@ async function completeInstagramConnection(userId, code) {
 // recovered from the one-time OAuth state, so Facebook never silently creates
 // an Instagram connection and Instagram never marks Facebook connected.
 
-// Browser JS SDK Login for Business exchange.
-// The SDK returns a short-lived authorization CODE when response_type=code is used.
-// The code is exchanged server-side; the app secret never reaches the browser.
-app.post("/api/connections/facebook/sdk-exchange", auth, async (req, res) => {
-  try {
-    const code = String(req.body?.code || "").trim();
-    if (!code) return res.status(400).json({ message: "Meta did not return an authorization code." });
-    const result = await completeFacebookConnection(req.auth.id, code);
-    res.json({
-      connected: true,
-      pageName: result.pageName || "",
-      message: result.pageName ? `${result.pageName} connected.` : "Facebook connected successfully."
-    });
-  } catch (error) {
-    console.error("Facebook SDK exchange error:", error.message);
-    res.status(400).json({ message: error.message || "Facebook connection could not be completed." });
-  }
-});
+// Facebook uses the server-side Login for Business redirect flow below.
+// The browser SDK exchange route was intentionally removed so there is only
+// one canonical Facebook OAuth path and one state/callback implementation.
 
 app.get("/api/connections/facebook/callback", async (req, res) => {
   const redirectToDashboard = (status, reason, message) => {

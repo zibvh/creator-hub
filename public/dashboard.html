@@ -15,31 +15,6 @@
 </div>
 
 <script>
-window.fbAsyncInit=function(){
-  try{
-    FB.init({
-      appId:"38206069689040739",
-      cookie:true,
-      xfbml:true,
-      version:"v21.0"
-    });
-    window.creovahFbReady=true;
-  }catch(error){
-    console.error("Facebook SDK init failed:",error);
-    window.creovahFbReady=false;
-  }
-};
-(function(d,s,id){
-  if(d.getElementById(id))return;
-  const js=d.createElement(s);js.id=id;
-  js.src="https://connect.facebook.net/en_US/sdk.js";
-  js.async=true;js.defer=true;
-  js.onerror=function(){window.creovahFbReady=false;};
-  const fjs=d.getElementsByTagName(s)[0];
-  fjs.parentNode.insertBefore(js,fjs);
-})(document,"script","facebook-jssdk");
-</script>
-<script>
 const t=localStorage.getItem("creovah_token");if(!t)location.href="/auth.html";const $=id=>document.getElementById(id);let user=null,items=[];
 function banner(kind,msg){notice(kind,kind==="ok"?"Success":"Something went wrong",msg)}
 function notice(kind,title,msg,action="Okay"){const modal=$("noticeModal"),card=$("noticeCard");card.className=`notice-card ${kind}`;$("noticeTitle").textContent=title;$("noticeMessage").textContent=msg;$("noticeAction").textContent=action;modal.classList.add("open");setTimeout(()=>$("noticeAction").focus(),0)}
@@ -57,38 +32,17 @@ function renderConnections(){const rows=[{key:"instagram",cls:"ig",label:"Instag
     b.disabled=true;
     b.textContent="Connecting…";
     try{
-      if(typeof window.FB!=="object" || typeof FB.login!=="function"){
-        throw new Error("Facebook Login could not load. Check your connection and refresh the page.");
-      }
-      const response=await new Promise((resolve,reject)=>{
-        let settled=false;
-        const finish=(fn,value)=>{if(settled)return;settled=true;clearTimeout(timer);fn(value)};
-        const timer=setTimeout(()=>finish(reject,new Error("Facebook Login timed out. Please try again.")),60000);
-        try{
-          FB.login(resp=>finish(resolve,resp),{
-            config_id:"1528947972253797",
-            response_type:"code",
-            override_default_response_type:true
-          });
-        }catch(error){finish(reject,error)}
-      });
-      if(!response) throw new Error("Facebook did not return a login response.");
-      if(response.status==="unknown" && !response.authResponse) throw new Error("Facebook login was cancelled or could not be completed.");
-      const code=response.authResponse?.code;
-      if(!code) throw new Error("Facebook did not return an authorization code. Please try again.");
-      const r=await fetch("/api/connections/facebook/sdk-exchange",{
-        method:"POST",
-        headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},
-        body:JSON.stringify({code})
+      const r=await fetch("/api/connections/facebook/start",{
+        headers:{Authorization:"Bearer "+t}
       });
       const d=await r.json().catch(()=>({}));
-      if(!r.ok) throw new Error(d.message||"Facebook connection could not be completed.");
-      notice("ok","Facebook connected",d.message||"Your Facebook Page is connected.");
-      const me=await fetch("/api/me",{headers:{Authorization:"Bearer "+t}});
-      if(me.ok){const md=await me.json();user=md.user;renderConnections();updateStats()}
+      if(!r.ok || !d.url) throw new Error(d.message||"Unable to start the Facebook connection.");
+      // Use one canonical OAuth path: the server creates the signed state and
+      // sends the browser to Meta Login for Business. This avoids the browser
+      // SDK policy/opt-in route and keeps the app secret server-side.
+      location.href=d.url;
     }catch(e){
-      notice("err","Could not connect Facebook",e.message||"Unable to connect Facebook right now.","Close");
-    }finally{
+      notice("err","Could not connect Facebook",e.message||"Unable to start the Facebook connection.","Close");
       b.disabled=false;
       b.textContent="Connect";
     }
