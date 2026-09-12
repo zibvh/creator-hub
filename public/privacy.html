@@ -107,5 +107,7 @@
     <a href="mailto:creovah@gmail.com">Contact</a>
   </div>
 </footer>
-</body>
+<script>
+fetch("/api/legal").then(r=>r.json()).then(d=>{if(d.legal && d.legal.privacy)document.getElementById("legalContent").innerHTML=d.legal.privacy;}).catch(()=>{});
+</script></body>
 </html>

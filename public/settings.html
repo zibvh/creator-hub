@@ -1,115 +1,32 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Settings — creovah</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#faf7f2;color:#1c1712;font-family:"Inter",sans-serif}
-.top{height:70px;border-bottom:1px solid #e1dcd4;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#fff}
-.brand{font:800 23px Fraunces;letter-spacing:-1.5px}
-.back{font-size:13px;font-weight:600;color:#777}
-.wrap{max-width:680px;margin:60px auto;padding:0 25px}
-.eyebrow{text-transform:uppercase;letter-spacing:1.5px;font-size:10px;font-weight:800;color:#e8622d}
-h1{font:800 36px Fraunces;letter-spacing:-2px;margin:12px 0 40px}
-.card{background:#fff;border:1px solid #e3ded6;border-radius:13px;padding:26px;margin-bottom:18px}
-.card h2{font:700 17px Fraunces;margin:0 0 6px}
-.card p{color:#8a837a;font-size:13px;line-height:1.6;margin:0 0 18px}
-.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #f0ece5}
-.row:first-of-type{border-top:0}
-.row span{font-size:14px;font-weight:600}
-.row small{display:block;color:#8a837a;font-size:12px;font-weight:400;margin-top:2px}
-.btn{border:0;border-radius:8px;padding:11px 16px;font-weight:700;font-size:13px;cursor:pointer}
-.btn.plain{background:#f0ece5;color:#1c1712}
-.btn.danger{background:#e8622d;color:#fff}
-.btn:disabled{opacity:.5;cursor:default}
-.danger-card{border-color:#f0d3c8}
-.banner{border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;margin-bottom:20px}
-.banner.ok{background:#e7f3ea;color:#1f7a3d}
-.banner.err{background:#fbe9e5;color:#e8622d}
-.confirm-box{margin-top:14px;padding:16px;background:#faf5f0;border-radius:10px;font-size:13px}
-.confirm-box p{margin:0 0 12px;color:#4a453e}
-.confirm-box .actions{display:flex;gap:10px}
-footer{max-width:680px;margin:0 auto;padding:20px 25px 40px;font-size:12px;color:#8a837a}
-footer a{color:#e8622d;font-weight:600;text-decoration:none}
-</style>
-</head>
-<body>
-<header class="top"><span class="brand">creovah</span><a class="back" href="/dashboard.html">← Back to workspace</a></header>
-<main class="wrap">
-  <div id="banner"></div>
-  <span class="eyebrow">Settings</span>
-  <h1>Your account.</h1>
-
-  <div class="card">
-    <h2>Profile</h2>
-    <p>Basic information tied to your account.</p>
-    <div class="row"><span>Name</span><span id="fName"></span></div>
-    <div class="row"><span>Username</span><span id="fUsername"></span></div>
-    <div class="row"><span>Email</span><span id="fEmail"></span></div>
-  </div>
-
-  <div class="card">
-    <h2>Connected platforms</h2>
-    <p>Manage social connections from your <a href="/dashboard.html">workspace dashboard</a>.</p>
-  </div>
-
-  <div class="card danger-card">
-    <h2>Delete your data</h2>
-    <p>This disconnects any linked Instagram or Facebook accounts immediately and submits a request to permanently delete your creovah account and personal data. This can't be undone.</p>
-    <button class="btn danger" id="requestDeletion">Request data deletion</button>
-    <div class="confirm-box" id="confirmBox" style="display:none">
-      <p>Are you sure? This will disconnect your social accounts now and queue your account for permanent deletion.</p>
-      <div class="actions">
-        <button class="btn danger" id="confirmYes">Yes, delete my data</button>
-        <button class="btn plain" id="confirmNo">Cancel</button>
-      </div>
-    </div>
-  </div>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings — Creovah</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="https://unpkg.com/lucide@latest"></script><style>
+*{box-sizing:border-box}body{margin:0;background:#faf7f2;color:#1c1712;font-family:Inter,sans-serif}.top{height:70px;background:#fff;border-bottom:1px solid #e3ded6;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10}.brand{font:800 23px Fraunces}.back{font-size:13px;font-weight:700}.wrap{max-width:900px;margin:44px auto;padding:0 20px}.eyebrow{text-transform:uppercase;letter-spacing:1.6px;font-size:10px;font-weight:800;color:#e8622d}h1{font:800 42px Fraunces;letter-spacing:-2px;margin:10px 0 34px}.card{background:#fff;border:1px solid #e3ded6;border-radius:16px;padding:24px;margin-bottom:16px}.card h2{font:700 19px Fraunces;margin:0 0 6px}.card>p{font-size:13px;color:#81796f;line-height:1.6;margin:0 0 18px}.row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 0;border-top:1px solid #eee9e2}.label{font-size:14px;font-weight:700}.sub{font-size:12px;color:#8a837a;margin-top:3px}.btn{border:0;border-radius:9px;padding:10px 14px;font:700 12px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:7px}.btn svg{width:15px}.dark{background:#1c1712;color:#fff}.light{background:#f0ece5;color:#1c1712}.danger{background:#d94d2b;color:#fff}.fields{display:grid;gap:12px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}.field input,.field textarea{width:100%;border:1px solid #dcd6ce;border-radius:9px;padding:11px;font:inherit}.field textarea{min-height:130px;resize:vertical}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.social{display:flex;align-items:center;gap:12px}.logo{width:40px;height:40px;border-radius:10px;background:#f4f0ea;display:grid;place-items:center}.logo img{width:22px;height:22px}.state{font-size:11px;color:#8a837a;margin-top:3px}.banner{padding:13px 15px;border-radius:10px;margin-bottom:16px;font-size:13px;font-weight:600}.ok{background:#e7f3ea;color:#236c3d}.err{background:#fbe9e5;color:#a53d25}.legal-link{color:#e8622d;font-weight:700}.modal{position:fixed;inset:0;background:#0004;display:none;align-items:center;justify-content:center;padding:18px;z-index:20}.modal.open{display:flex}.modal-card{background:#fff;width:min(520px,100%);border-radius:16px;padding:24px}.modal-head{display:flex;justify-content:space-between}.close{border:0;background:#f0ece5;border-radius:50%;width:34px;height:34px}.notice{font-size:13px;color:#81796f;line-height:1.6}html[data-theme="dark"] body{background:#171512;color:#f6f1ea}html[data-theme="dark"] .top,html[data-theme="dark"] .card,html[data-theme="dark"] .modal-card{background:#211e1a;border-color:#3a352e}html[data-theme="dark"] .back,html[data-theme="dark"] .card>p,html[data-theme="dark"] .sub,html[data-theme="dark"] .notice{color:#b7afa4}html[data-theme="dark"] .field input,html[data-theme="dark"] .field textarea{background:#171512;color:#f6f1ea;border-color:#4a443b}html[data-theme="dark"] .light{background:#39342d;color:#f6f1ea}
+@media(max-width:600px){.top{padding:0 16px}.wrap{margin:28px auto;padding:0 14px}h1{font-size:35px}.row{align-items:flex-start}.row>.btn{flex:none}.card{padding:19px}.social .logo{width:36px;height:36px}.btn{padding:10px 12px}}\n</style></head><body><header class="top"><span class="brand">creovah</span><a class="back" href="/dashboard.html"><i data-lucide="arrow-left"></i> Workspace</a></header><main class="wrap"><div id="banner"></div><span class="eyebrow">Settings</span><h1>Account settings</h1>
+<section class="card"><h2>Account</h2><p>Manage your personal account information and password.</p><div class="row"><div><div class="label">Name</div><div class="sub" id="name"></div></div></div><div class="row"><div><div class="label">Username</div><div class="sub" id="username"></div></div></div><div class="row"><div><div class="label">Email</div><div class="sub" id="email"></div></div></div><div class="row"><div><div class="label">Phone</div><div class="sub" id="phone"></div></div></div><div class="row"><div><div class="label">Password</div><div class="sub">Change your account password.</div></div><button class="btn light" id="passwordOpen"><i data-lucide="key-round"></i> Change password</button></div></section>
+<section class="card"><h2>Social accounts</h2><p>Only connected platforms can be selected when creating a post.</p><div id="socials"></div><div id="socialError" class="err" style="display:none;margin-top:12px"></div></section>
+<section class="card"><h2>Publishing</h2><p>Set defaults used when creating and scheduling content.</p><div class="row"><div><div class="label">Scheduling timezone</div><div class="sub" id="timezone"></div></div><button class="btn light" id="tzBtn">Use device timezone</button></div></section>
+<section class="card"><h2>Notifications</h2><p>Choose whether Creovah can send browser notifications.</p><div class="row"><div><div class="label">Browser notifications</div><div class="sub" id="notifyState"></div></div><button class="btn light" id="notifyBtn">Enable</button></div></section>
+<section class="card"><h2>Appearance</h2><p>Choose how Creovah looks on this device.</p><div class="actions"><button class="btn light theme" data-theme="system">System</button><button class="btn light theme" data-theme="light">Light</button><button class="btn light theme" data-theme="dark">Dark</button></div></section>
+<section class="card"><h2>Security & privacy</h2><p>Review your account data and deletion options.</p><div class="row"><div><div class="label">Request your data</div><div class="sub">Request an export of information associated with your account.</div></div><button class="btn light" id="exportBtn">Request</button></div><div class="row"><div><div class="label">Delete account</div><div class="sub">Disconnect linked accounts and request permanent account deletion.</div></div><button class="btn danger" id="deleteOpen">Delete account</button></div></section>
+<section class="card"><h2>Legal</h2><p>Current policies for using Creovah.</p><div class="row"><div class="label"><a class="legal-link" href="/terms.html">Terms of Use</a></div><i data-lucide="chevron-right"></i></div><div class="row"><div class="label"><a class="legal-link" href="/privacy.html">Privacy Policy</a></div><i data-lucide="chevron-right"></i></div></section>
 </main>
-<footer>Read our <a href="/privacy.html">Privacy Policy</a> for details on how your data is used and retained.</footer>
-
+<div class="modal" id="passwordModal"><div class="modal-card"><div class="modal-head"><h2>Change password</h2><button class="close" data-close="passwordModal"><i data-lucide="x"></i></button></div><div class="fields"><div class="field"><label>Current password</label><input id="currentPassword" type="password"></div><div class="field"><label>New password</label><input id="newPassword" type="password"></div></div><div class="actions"><button class="btn dark" id="passwordSave">Save password</button></div><p id="passwordMsg" class="notice"></p></div></div>
+<div class="modal" id="deleteModal"><div class="modal-card"><div class="modal-head"><h2>Delete account</h2><button class="close" data-close="deleteModal"><i data-lucide="x"></i></button></div><p class="notice">This disconnects linked social accounts and submits your account for permanent deletion. This cannot be undone.</p><div class="actions"><button class="btn danger" id="deleteConfirm">Request deletion</button></div></div></div>
 <script>
-const t=localStorage.getItem("creovah_token");
-if(!t)location.href="/auth.html";
-
-function showBanner(kind,msg){
-  document.getElementById("banner").innerHTML=`<div class="banner ${kind}">${msg}</div>`;
-}
-
-fetch("/api/me",{headers:{Authorization:"Bearer "+t}}).then(r=>r.json()).then(d=>{
-  if(!d.user)return location.href="/auth.html";
-  document.getElementById("fName").textContent=d.user.name;
-  document.getElementById("fUsername").textContent="@"+d.user.username;
-  document.getElementById("fEmail").textContent=d.user.email;
-  if(d.user.deletionRequested){
-    showBanner("ok","A deletion request is already on file for this account.");
-    document.getElementById("requestDeletion").disabled=true;
-  }
-}).catch(()=>location.href="/auth.html");
-
-const btn=document.getElementById("requestDeletion");
-const box=document.getElementById("confirmBox");
-btn.onclick=()=>{box.style.display="block";btn.style.display="none"};
-document.getElementById("confirmNo").onclick=()=>{box.style.display="none";btn.style.display="inline-block"};
-document.getElementById("confirmYes").onclick=async()=>{
-  const yesBtn=document.getElementById("confirmYes");
-  yesBtn.disabled=true;
-  try{
-    const r=await fetch("/api/account/request-deletion",{method:"POST",headers:{Authorization:"Bearer "+t}});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.message||"Something went wrong.");
-    box.style.display="none";
-    showBanner("ok","Your data deletion request has been received. Connected accounts have been disconnected.");
-  }catch(e){
-    showBanner("err",e.message);
-    yesBtn.disabled=false;
-  }
-};
-</script>
-</body>
-</html>
+const token=localStorage.getItem("creovah_token");if(!token)location.href="/auth.html";const $=id=>document.getElementById(id);let me=null;
+function msg(kind,text){$("banner").innerHTML=`<div class="banner ${kind}">${text}</div>`}
+function esc(v){return String(v||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{...(opts.headers||{}),Authorization:"Bearer "+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||"Request failed.");return d}
+async function load(){try{const d=await api("/api/me");me=d.user;$("name").textContent=me.name;$("username").textContent="@"+me.username;$("email").textContent=me.email;$("phone").textContent=me.phone;$("timezone").textContent=localStorage.getItem("creovah_timezone")||Intl.DateTimeFormat().resolvedOptions().timeZone;renderSocials();renderNotify();if(me.role==="admin")document.body.insertAdjacentHTML("beforeend",'<a href="/admin.html" style="position:fixed;bottom:18px;right:18px;background:#1c1712;color:#fff;padding:11px 14px;border-radius:9px;font:700 12px Inter;text-decoration:none">Admin</a>')}catch(e){location.href="/auth.html"}}
+const meta={facebook:{name:"Facebook",logo:"https://cdn.simpleicons.org/facebook",key:"facebook"},instagram:{name:"Instagram",logo:"https://cdn.simpleicons.org/instagram",key:"instagram"},linkedin:{name:"LinkedIn",logo:"https://cdn.simpleicons.org/linkedin",key:"linkedin"}};
+function renderSocials(){const box=$("socials");box.innerHTML=Object.values(meta).map(m=>{const c=me.connections?.[m.key]?.connected;const account=me.connections?.[m.key]?.name||me.connections?.[m.key]?.pageName||me.connections?.[m.key]?.igUsername||"Connected";return `<div class="row"><div class="social"><span class="logo"><img src="${m.logo}" alt=""></span><div><div class="label">${m.name}</div><div class="state">${c?esc(account):"Not connected"}</div></div></div><button class="btn ${c?"light":"dark"}" data-social="${m.key}">${c?"Disconnect":"Connect"}</button></div>`}).join("");box.querySelectorAll("[data-social]").forEach(b=>b.onclick=()=>social(b.dataset.social))}
+async function social(p){const b=document.querySelector(`[data-social="${p}"]`),e=$("socialError");e.style.display="none";b.disabled=true;if(me.connections?.[p]?.connected){try{const d=await api(`/api/connections/${p}/disconnect`,{method:"POST"});me=d.user;renderSocials()}catch(x){e.textContent=x.message;e.style.display="block"}b.disabled=false;return}try{const r=await api(`/api/connections/${p}/start?returnTo=settings`);if(!r.url)throw Error("Unable to start the connection.");location.href=r.url}catch(x){e.textContent=x.message;e.style.display="block";b.disabled=false}}
+$("passwordOpen").onclick=()=>$("passwordModal").classList.add("open");document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove("open"));
+$("passwordSave").onclick=async()=>{const b=$("passwordSave");$("passwordMsg").textContent="";b.disabled=true;try{const d=await api("/api/account/change-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({currentPassword:$("currentPassword").value,newPassword:$("newPassword").value})});$("passwordMsg").textContent=d.message;$("currentPassword").value="";$("newPassword").value=""}catch(e){$("passwordMsg").textContent=e.message}finally{b.disabled=false}};
+$("deleteOpen").onclick=()=>$("deleteModal").classList.add("open");$("deleteConfirm").onclick=async()=>{try{const d=await api("/api/account/request-deletion",{method:"POST"});msg("ok",d.message||"Deletion request received.")}catch(e){msg("err",e.message)}$("deleteModal").classList.remove("open")};
+$("tzBtn").onclick=()=>{localStorage.setItem("creovah_timezone",Intl.DateTimeFormat().resolvedOptions().timeZone);$("timezone").textContent=localStorage.getItem("creovah_timezone")};
+$("notifyBtn").onclick=async()=>{if(!("Notification"in window)){msg("err","Browser notifications are not available here.");return}const p=await Notification.requestPermission();if(p==="granted"){await api("/api/onboarding",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({notifications:true})});renderNotify()}};
+function renderNotify(){const p=("Notification"in window)?Notification.permission:"unsupported";$("notifyState").textContent=p==="granted"?"Enabled":p==="denied"?"Blocked in browser":"Not enabled"}
+$("exportBtn").onclick=async()=>{try{const d=await api("/api/account/export");const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="creovah-data-export.json";a.click();URL.revokeObjectURL(a.href);msg("ok","Your data export is ready.")}catch(e){msg("err",e.message)}};
+document.querySelectorAll(".theme").forEach(b=>b.onclick=()=>{localStorage.setItem("creovah_theme",b.dataset.theme);document.documentElement.dataset.theme=b.dataset.theme});
+document.documentElement.dataset.theme=localStorage.getItem("creovah_theme")||"system";load();lucide.createIcons();
+</script></body></html>

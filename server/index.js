@@ -17,6 +17,7 @@ const APP_BASE_URL = process.env.APP_BASE_URL || "https://creovah.onrender.com";
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
 
 if (!process.env.MONGODB_URI) {
   console.error("MONGODB_URI is not set. This server requires MongoDB.");
@@ -85,7 +86,8 @@ const userSchema = new mongoose.Schema({
   notifications: { type: Boolean, default: false },
   onboardingCompleted: { type: Boolean, default: false },
   deletionRequested: { type: Boolean, default: false },
-  deletionRequestedAt: Date
+  deletionRequestedAt: Date,
+  disabled: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
@@ -107,6 +109,11 @@ const contentSchema = new mongoose.Schema({
 
 const Content = mongoose.model("Content", contentSchema);
 
+const notificationSchema = new mongoose.Schema({ userId:{type:mongoose.Schema.Types.ObjectId,ref:"User",index:true}, title:{type:String,required:true,trim:true,maxlength:120}, message:{type:String,required:true,trim:true,maxlength:2000}, read:{type:Boolean,default:false}, createdAt:{type:Date,default:Date.now} },{timestamps:true});
+const Notification = mongoose.model("Notification", notificationSchema);
+const legalSchema = new mongoose.Schema({ key:{type:String,unique:true}, terms:{type:String,default:""}, privacy:{type:String,default:""}, updatedAt:{type:Date,default:Date.now} });
+const Legal = mongoose.model("Legal", legalSchema);
+
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB connection failed:", err.message));
@@ -114,7 +121,7 @@ mongoose.connect(process.env.MONGODB_URI)
 function normalizeEmail(email) { return String(email || "").trim().toLowerCase(); }
 function normalizeUsername(username) { return String(username || "").trim().toLowerCase(); }
 function tokenFor(user) {
-  return jwt.sign({ id: String(user._id || user.id), username: user.username }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ id: String(user._id || user.id), username: user.username, role: user.role || "" }, JWT_SECRET, { expiresIn: "7d" });
 }
 function safeUser(user) {
   const conn = user.connections || {};
@@ -143,7 +150,8 @@ function safeUser(user) {
     },
     notifications: Boolean(user.notifications),
     onboardingCompleted: Boolean(user.onboardingCompleted),
-    deletionRequested: Boolean(user.deletionRequested)
+    deletionRequested: Boolean(user.deletionRequested),
+    disabled: Boolean(user.disabled)
   };
 }
 async function findUserByEmail(email) {
@@ -170,7 +178,11 @@ function auth(req, res, next) {
   if (!token) return res.status(401).json({ message: "Authentication required." });
   try {
     req.auth = jwt.verify(token, JWT_SECRET);
-    next();
+    User.findById(req.auth.id).then(user => {
+      if (!user) return res.status(401).json({ message: "Account not found." });
+      if (user.disabled) return res.status(403).json({ message: "This account has been disabled." });
+      next();
+    }).catch(() => res.status(401).json({ message: "Authentication required." }));
   } catch {
     return res.status(401).json({ message: "Session expired. Please sign in again." });
   }
@@ -242,6 +254,42 @@ app.get("/api/content", auth, async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Unable to load your content right now." });
   }
+});
+
+app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Choose a photo or video." });
+    const user = await findUserById(req.auth.id);
+    const conn = user?.connections?.linkedin;
+    if (!conn?.connected || !conn.accessTokenEncrypted || !conn.memberUrn) return res.status(400).json({ message: "Connect LinkedIn before uploading media." });
+    const mime = String(req.file.mimetype || "").toLowerCase();
+    const token = decryptToken(conn.accessTokenEncrypted);
+    if (["image/jpeg", "image/png", "image/gif"].includes(mime)) {
+      const init = await linkedinFetch("https://api.linkedin.com/rest/images?action=initializeUpload", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ initializeUploadRequest: { owner: conn.memberUrn } }) });
+      const value = init.data.value || {};
+      if (!value.uploadUrl || !value.image) throw new Error("LinkedIn did not return an image upload URL.");
+      const upload = await fetch(value.uploadUrl, { method: "PUT", headers: { "Content-Type": mime }, body: req.file.buffer });
+      if (!upload.ok) throw new Error(`LinkedIn image upload failed (${upload.status}).`);
+      return res.json({ urn: value.image, mediaType: "image" });
+    }
+    if (mime === "video/mp4") {
+      const init = await linkedinFetch("https://api.linkedin.com/rest/videos?action=initializeUpload", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ initializeUploadRequest: { owner: conn.memberUrn, fileSizeBytes: req.file.size, uploadCaptions: false, uploadThumbnail: false } }) });
+      const value = init.data.value || {}; const instructions = value.uploadInstructions || [];
+      if (!value.video || !instructions.length) throw new Error("LinkedIn did not return video upload instructions.");
+      const partIds = [];
+      for (const instruction of instructions) {
+        const start = Number(instruction.firstByte || 0); const end = Number(instruction.lastByte ?? req.file.size - 1);
+        const chunk = req.file.buffer.subarray(start, Math.min(end + 1, req.file.size));
+        const upload = await fetch(instruction.uploadUrl, { method: "PUT", headers: { "Content-Type": "application/octet-stream" }, body: chunk });
+        if (!upload.ok) throw new Error(`LinkedIn video upload failed (${upload.status}).`);
+        const etag = upload.headers.get("etag"); if (!etag) throw new Error("LinkedIn did not return a video part identifier.");
+        partIds.push(etag);
+      }
+      await linkedinFetch("https://api.linkedin.com/rest/videos?action=finalizeUpload", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ finalizeUploadRequest: { video: value.video, uploadToken: value.uploadToken || "", uploadedPartIds: partIds } }) });
+      return res.json({ urn: value.video, mediaType: "video" });
+    }
+    return res.status(400).json({ message: "Use a JPG, PNG, GIF or MP4 file." });
+  } catch (error) { console.error("LinkedIn media upload error:", error); res.status(500).json({ message: error.message || "Unable to upload media to LinkedIn." }); }
 });
 
 app.post("/api/content", auth, async (req, res) => {
@@ -510,6 +558,71 @@ async function processLinkedInSchedules() {
   } finally { schedulerBusy = false; }
 }
 setInterval(processLinkedInSchedules, 60 * 1000);
+
+
+app.get("/api/account/export", auth, async (req,res)=>{
+  try {
+    const user=await findUserById(req.auth.id); if(!user)return res.status(404).json({message:"Account not found."});
+    const content=await Content.find({userId:req.auth.id}).select("-__v").lean();
+    const notifications=await Notification.find({userId:req.auth.id}).select("-__v").lean();
+    const exported={account:{id:String(user._id),name:user.name,username:user.username,email:user.email,phone:user.phone,role:user.role||"",discoverySource:user.discoverySource||"",createdAt:user.createdAt},connections:safeUser(user).connections,content,notifications};
+    res.json(exported);
+  } catch { res.status(500).json({message:"Unable to export your data right now."}); }
+});
+
+app.post("/api/account/change-password", auth, async (req,res)=>{
+  try {
+    const user=await findUserById(req.auth.id), current=String(req.body.currentPassword||""), next=String(req.body.newPassword||"");
+    if(!user)return res.status(404).json({message:"Account not found."});
+    if(!current||!next)return res.status(400).json({message:"Enter your current and new password."});
+    if(next.length<8)return res.status(400).json({message:"New password must be at least 8 characters."});
+    if(!(await bcrypt.compare(current,user.passwordHash)))return res.status(400).json({message:"Current password is incorrect."});
+    user.passwordHash=await bcrypt.hash(next,12); await user.save(); res.json({message:"Password changed."});
+  } catch { res.status(500).json({message:"Unable to change your password right now."}); }
+});
+async function adminOnly(req,res,next){
+  try { const user=await User.findById(req.auth.id).select("role disabled"); if(!user||user.disabled||user.role!=="admin") return res.status(403).json({message:"Admin access required."}); next(); }
+  catch { return res.status(403).json({message:"Admin access required."}); }
+}
+app.get("/api/admin/users",auth,adminOnly,async(req,res)=>{
+  const users=await User.find({}).sort({createdAt:-1}).lean();
+  const content=await Content.find({}).sort({createdAt:-1}).lean();
+  const adminUsers=users.map(u=>({
+    ...safeUser(u), createdAt:u.createdAt, updatedAt:u.updatedAt,
+    discoverySource:u.discoverySource||"",
+    connections:{
+      facebook:{connected:Boolean(u.connections?.facebook?.connected),pageId:u.connections?.facebook?.pageId||"",pageName:u.connections?.facebook?.pageName||""},
+      instagram:{connected:Boolean(u.connections?.instagram?.connected),igBusinessAccountId:u.connections?.instagram?.igBusinessAccountId||"",igUsername:u.connections?.instagram?.igUsername||"",pageId:u.connections?.instagram?.pageId||""},
+      linkedin:{connected:Boolean(u.connections?.linkedin?.connected),memberId:u.connections?.linkedin?.memberId||"",memberUrn:u.connections?.linkedin?.memberUrn||"",name:u.connections?.linkedin?.name||"",email:u.connections?.linkedin?.email||""}
+    }
+  }));
+  res.json({users:adminUsers,content});
+});
+app.patch("/api/admin/users/:id",auth,adminOnly,async(req,res)=>{
+  const user=await User.findById(req.params.id); if(!user)return res.status(404).json({message:"User not found."});
+  if(String(user._id)===String(req.auth.id)&&req.body.disabled===true)return res.status(400).json({message:"You cannot disable your own admin account."});
+  if(typeof req.body.disabled==="boolean")user.disabled=req.body.disabled;
+  await user.save(); res.json({user:safeUser(user)});
+});
+app.delete("/api/admin/users/:id",auth,adminOnly,async(req,res)=>{
+  if(String(req.params.id)===String(req.auth.id))return res.status(400).json({message:"You cannot delete your own admin account."});
+  const user=await User.findByIdAndDelete(req.params.id); if(!user)return res.status(404).json({message:"User not found."});
+  await Content.deleteMany({userId:req.params.id}); await Notification.deleteMany({userId:req.params.id}); res.json({message:"User deleted."});
+});
+app.post("/api/admin/notifications",auth,adminOnly,async(req,res)=>{
+  const title=String(req.body.title||"").trim(), message=String(req.body.message||"").trim();
+  if(!title||!message)return res.status(400).json({message:"Title and message are required."});
+  let users;
+  if(req.body.all===true)users=await User.find({}, "_id").lean();
+  else users=await User.find({_id:{$in:Array.isArray(req.body.userIds)?req.body.userIds:[]}}, "_id").lean();
+  if(!users.length)return res.status(400).json({message:"Choose at least one user."});
+  await Notification.insertMany(users.map(u=>({userId:u._id,title,message})));
+  res.json({message:`Notification sent to ${users.length} user${users.length===1?"":"s"}.`,count:users.length});
+});
+app.get("/api/notifications",auth,async(req,res)=>res.json({items:await Notification.find({userId:req.auth.id}).sort({createdAt:-1}).limit(50).lean()}));
+app.post("/api/notifications/:id/read",auth,async(req,res)=>{await Notification.updateOne({_id:req.params.id,userId:req.auth.id},{$set:{read:true}});res.json({ok:true});});
+app.get("/api/legal",async(req,res)=>{const legal=await Legal.findOne({key:"site"}).lean();res.json({legal:legal||{terms:"",privacy:""}});});
+app.post("/api/admin/legal",auth,adminOnly,async(req,res)=>{const legal=await Legal.findOneAndUpdate({key:"site"},{key:"site",terms:String(req.body.terms||""),privacy:String(req.body.privacy||""),updatedAt:new Date()},{upsert:true,new:true});res.json({legal});});
 
 // --- Facebook / Instagram OAuth connect flows ---
 // Facebook and Instagram are intentionally separate connections. For the current

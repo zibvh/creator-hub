@@ -36,5 +36,7 @@
 <p>Questions about these terms can be sent to <a href="mailto:creovah@gmail.com">creovah@gmail.com</a>.</p>
 </main>
 <footer><span class="brand">creovah</span><div><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/settings.html">Settings</a><a href="mailto:creovah@gmail.com">Contact</a></div></footer>
-</body>
+<script>
+fetch("/api/legal").then(r=>r.json()).then(d=>{if(d.legal && d.legal.terms)document.getElementById("legalContent").innerHTML=d.legal.terms;}).catch(()=>{});
+</script></body>
 </html>
