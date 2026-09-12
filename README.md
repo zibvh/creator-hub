@@ -1,33 +1,17 @@
-# Creovah
+# Creovah v20 — LinkedIn edit media fix
 
-A single-repo Node/Express app with a real marketing landing page, authentication, email verification, onboarding, and a protected starter workspace.
+This build improves the LinkedIn Edit flow.
 
-## Render
+## Changes
+- Edit now loads the existing LinkedIn image/video into the composer preview when LinkedIn exposes the media download URL.
+- Edit can change the caption/title.
+- Selecting a new photo/video while editing replaces the media on LinkedIn by creating the corrected post and removing the old post.
+- Removing existing media creates a text-only replacement and removes the old media post.
+- Alt-text changes are handled through the same replacement flow when an existing media post is edited.
+- Existing text-only edits continue to use LinkedIn's partial-update API.
+- Drafts can still be continued without publishing.
 
-Build: `npm install`
-Start: `npm start`
-Health: `/api/health`
+## Important
+LinkedIn's Posts API does not expose a direct media-replacement field in partial updates. Media changes therefore use a replacement-post flow. The replacement is created first so the old post is not removed if the new version cannot be created.
 
-Environment variables:
-- `JWT_SECRET`
-- `MONGODB_URI`
-- `MAILJET_API_KEY`
-- `MAILJET_SECRET_KEY`
-- `MAILJET_SENDER_EMAIL=creovah@gmail.com`
-- `MAILJET_SENDER_NAME=creovah`
-
-The social connection UI is intentionally a UI/state layer for now. Real Meta/TikTok OAuth credentials and platform review are separate integrations and should be added before claiming that accounts can actually publish.
-
-
-## Meta connections
-Facebook and Instagram are separate connection flows. Configure the current Facebook Login for Business configuration in Render:
-
-- `FB_CONFIG_ID=1528947972253797` — current Facebook Login for Business configuration.
-- `INSTAGRAM_CONFIG_ID=` — leave empty until Instagram is configured separately.
-- `FB_REDIRECT_URI=https://creovah.onrender.com/api/connections/facebook/callback`
-
-The dashboard sends `/api/connections/facebook/start` for Facebook and `/api/connections/instagram/start` for Instagram. The callback uses a one-time server-side OAuth state to finish the correct connection without automatically connecting the other platform.
-
-
-## Facebook Login for Business
-Facebook uses the JavaScript SDK Login for Business flow with config_id 1528947972253797 and a server-side code exchange. Instagram remains a separate connection and is not invoked by the Facebook button.
+Existing media preview uses LinkedIn's media download URL. Those URLs are temporary/signed and are fetched again when Edit is opened.

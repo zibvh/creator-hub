@@ -392,6 +392,36 @@ app.post("/api/content", auth, async (req, res) => {
   }
 });
 
+app.get("/api/content/:id/media-preview", auth, async (req, res) => {
+  try {
+    const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id }).lean();
+    if (!item) return res.status(404).json({ message: "Content not found." });
+    if (!item.mediaUrn) return res.status(404).json({ message: "This post has no media." });
+    const user = await findUserById(req.auth.id);
+    const conn = user?.connections?.linkedin;
+    if (!conn?.connected || !conn.accessTokenEncrypted) return res.status(400).json({ message: "Reconnect LinkedIn to load the existing media." });
+    const token = decryptToken(conn.accessTokenEncrypted);
+    const endpoint = item.mediaType === "video" ? "videos" : "images";
+    const encoded = encodeURIComponent(item.mediaUrn);
+    let response = await fetch(`https://api.linkedin.com/rest/${endpoint}/${encoded}`, {
+      headers: { Authorization: `Bearer ${token}`, "Linkedin-Version": LINKEDIN_VERSION, "X-Restli-Protocol-Version": "2.0.0" }
+    });
+    let data = await response.json().catch(() => ({}));
+    // w_member_social is write-only for versioned image GETs, but LinkedIn still
+    // supports legacy image GETs for member-owned media.
+    if (!response.ok && endpoint === "images") {
+      response = await fetch(`https://api.linkedin.com/rest/images/${encoded}`, { headers: { Authorization: `Bearer ${token}` } });
+      data = await response.json().catch(() => ({}));
+    }
+    if (!response.ok || !data.downloadUrl) {
+      return res.status(response.status || 404).json({ message: data.message || "LinkedIn has not made this media available yet." });
+    }
+    res.json({ url: data.downloadUrl, mediaType: item.mediaType, expiresAt: data.downloadUrlExpiresAt || null });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Unable to load the existing media." });
+  }
+});
+
 app.patch("/api/content/:id", auth, async (req, res) => {
   try {
     const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id });
@@ -399,6 +429,7 @@ app.patch("/api/content/:id", auth, async (req, res) => {
     const body = String(req.body.body ?? item.body).trim();
     const title = String(req.body.title ?? item.title).trim();
     if (!body && !title) return res.status(400).json({ message: "Add a title or caption." });
+
     if (item.platforms.includes("linkedin") && item.externalPostUrn) {
       const user = await findUserById(req.auth.id);
       const conn = user?.connections?.linkedin;
@@ -410,6 +441,7 @@ app.patch("/api/content/:id", auth, async (req, res) => {
         body: JSON.stringify({ patch: { $set: { commentary: body || title } } })
       });
     }
+
     item.title = title || "LinkedIn post"; item.body = body; await item.save();
     res.json({ item });
   } catch (error) { res.status(500).json({ message: error.message || "Unable to update this post right now." }); }
