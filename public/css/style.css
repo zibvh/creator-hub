@@ -157,6 +157,3 @@ footer a:hover{color:var(--clay-dark)}
   footer{padding:24px 18px 32px}
   .card{width:150px}
 }
-@media(max-width:760px){.nav{height:auto;min-height:68px;padding:14px 18px;gap:14px;flex-wrap:wrap}.nav-links{display:none}.nav-actions{margin-left:auto;gap:10px}.primary-btn.small{padding:9px 13px}.hero{padding:48px 18px 70px}.hero h1{letter-spacing:-1.4px}.hero p.lede{font-size:16px}.capability-grid,.capabilities-row,.trust{grid-template-columns:1fr}.section{padding:70px 18px}.workflow{padding:76px 18px}.trust{gap:18px}.filmstrip-wrap{margin:0 -18px}}
-
-@media(max-width:760px){.nav{height:auto;min-height:68px;padding:14px 18px;gap:14px;flex-wrap:wrap}.nav-links{display:none}.nav-actions{margin-left:auto;gap:10px}.primary-btn.small{padding:9px 13px}.hero{padding:48px 18px 70px}.hero h1{letter-spacing:-1.4px}.hero p.lede{font-size:16px}.capability-grid,.capabilities-row,.trust{grid-template-columns:1fr}.section{padding:70px 18px}.workflow{padding:76px 18px}.trust{gap:18px}.filmstrip-wrap{margin:0 -18px}}

@@ -101,6 +101,7 @@ const contentSchema = new mongoose.Schema({
   mediaUrn: { type: String, default: "" },
   mediaType: { type: String, default: "" },
   mediaAltText: { type: String, default: "", maxlength: 300 },
+  externalPostUrn: { type: String, default: "" },
   platforms: { type: [String], default: [] },
   status: { type: String, enum: ["draft", "scheduled", "published"], default: "draft" },
   scheduledFor: { type: Date, default: null },
@@ -317,8 +318,7 @@ app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, r
       if (!value.uploadUrl || !value.image) throw new Error("LinkedIn did not return an image upload URL.");
       const upload = await fetch(value.uploadUrl, { method: "PUT", headers: { "Content-Type": mime }, body: req.file.buffer });
       if (!upload.ok) throw new Error(`LinkedIn image upload failed (${upload.status}).`);
-      await waitForLinkedInMedia(token, value.image, "image");
-      return res.json({ urn: value.image, mediaType: "image" });
+      return res.json({ urn: value.image, mediaType: "image", status: "PROCESSING" });
     }
     if (mime === "video/mp4") {
       const init = await linkedinFetch("https://api.linkedin.com/rest/videos?action=initializeUpload", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ initializeUploadRequest: { owner: conn.memberUrn, fileSizeBytes: req.file.size, uploadCaptions: false, uploadThumbnail: false } }) });
@@ -334,8 +334,7 @@ app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, r
         partIds.push(etag);
       }
       await linkedinFetch("https://api.linkedin.com/rest/videos?action=finalizeUpload", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ finalizeUploadRequest: { video: value.video, uploadToken: value.uploadToken || "", uploadedPartIds: partIds } }) });
-      await waitForLinkedInMedia(token, value.video, "video");
-      return res.json({ urn: value.video, mediaType: "video" });
+      return res.json({ urn: value.video, mediaType: "video", status: "PROCESSING" });
     }
     return res.status(400).json({ message: "Use a JPG, PNG, GIF or MP4 file." });
   } catch (error) { console.error("LinkedIn media upload error:", error); res.status(500).json({ message: error.message || "Unable to upload media to LinkedIn." }); }
@@ -378,7 +377,8 @@ app.post("/api/content", auth, async (req, res) => {
         await item.save();
       }
       if (publishNow) {
-        await publishLinkedInContent(user, item);
+        const externalPostUrn = await publishLinkedInContent(user, item);
+        item.externalPostUrn = externalPostUrn;
         item.status = "published";
         item.publishedAt = new Date();
         item.scheduledFor = null;
@@ -392,14 +392,43 @@ app.post("/api/content", auth, async (req, res) => {
   }
 });
 
+app.patch("/api/content/:id", auth, async (req, res) => {
+  try {
+    const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id });
+    if (!item) return res.status(404).json({ message: "Content not found." });
+    const body = String(req.body.body ?? item.body).trim();
+    const title = String(req.body.title ?? item.title).trim();
+    if (!body && !title) return res.status(400).json({ message: "Add a title or caption." });
+    if (item.platforms.includes("linkedin") && item.externalPostUrn) {
+      const user = await findUserById(req.auth.id);
+      const conn = user?.connections?.linkedin;
+      if (!conn?.connected || !conn.accessTokenEncrypted) return res.status(400).json({ message: "Reconnect LinkedIn before editing this post." });
+      const token = decryptToken(conn.accessTokenEncrypted);
+      await linkedinFetch(`https://api.linkedin.com/rest/posts/${encodeURIComponent(item.externalPostUrn)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-RestLi-Method": "PARTIAL_UPDATE" },
+        body: JSON.stringify({ patch: { $set: { commentary: body || title } } })
+      });
+    }
+    item.title = title || "LinkedIn post"; item.body = body; await item.save();
+    res.json({ item });
+  } catch (error) { res.status(500).json({ message: error.message || "Unable to update this post right now." }); }
+});
+
 app.delete("/api/content/:id", auth, async (req, res) => {
   try {
-    const item = await Content.findOneAndDelete({ _id: req.params.id, userId: req.auth.id });
+    const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id });
     if (!item) return res.status(404).json({ message: "Content not found." });
-    res.json({ message: "Content deleted." });
-  } catch {
-    res.status(500).json({ message: "Unable to delete this content right now." });
-  }
+    if (item.platforms.includes("linkedin") && item.externalPostUrn) {
+      const user = await findUserById(req.auth.id);
+      const conn = user?.connections?.linkedin;
+      if (!conn?.connected || !conn.accessTokenEncrypted) return res.status(400).json({ message: "Reconnect LinkedIn before deleting this post." });
+      const token = decryptToken(conn.accessTokenEncrypted);
+      await linkedinFetch(`https://api.linkedin.com/rest/posts/${encodeURIComponent(item.externalPostUrn)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "X-RestLi-Method": "DELETE" } });
+    }
+    await Content.deleteOne({ _id: item._id });
+    res.json({ message: "Post deleted from Creovah and LinkedIn." });
+  } catch (error) { res.status(500).json({ message: error.message || "Unable to delete this post right now." }); }
 });
 
 app.get("/api/me", auth, async (req, res) => {
@@ -595,7 +624,7 @@ async function processLinkedInSchedules() {
       try {
         const user = await findUserById(item.userId);
         if (!user) throw new Error("Account not found.");
-        await publishLinkedInContent(user, item);
+        item.externalPostUrn = await publishLinkedInContent(user, item);
         item.status = "published";
         item.publishedAt = new Date();
         await item.save();
@@ -615,31 +644,8 @@ app.get("/api/account/export", auth, async (req,res)=>{
     const user=await findUserById(req.auth.id); if(!user)return res.status(404).json({message:"Account not found."});
     const content=await Content.find({userId:req.auth.id}).select("-__v").lean();
     const notifications=await Notification.find({userId:req.auth.id}).select("-__v").lean();
-    const rows=[
-      ["Creovah data export","" ,""],
-      ["Account","Name",user.name||""],
-      ["Account","Username",user.username||""],
-      ["Account","Email",user.email||""],
-      ["Account","Phone",user.phone||""],
-      ["Account","Role",user.role||"user"],
-      ["Account","Created",user.createdAt?new Date(user.createdAt).toISOString():""],
-      ["Account","Discovery source",user.discoverySource||""],
-    ];
-    for(const [platform,connection] of Object.entries(safeUser(user).connections||{})){
-      rows.push(["Social account",platform,connection?.connected?"Connected":"Not connected"]);
-    }
-    rows.push(["Content","",""],["Content","ID","Title / text / status"]);
-    for(const item of content){
-      rows.push(["Content",String(item._id),[item.title,item.text||item.body,item.status].filter(Boolean).join(" | ")]);
-    }
-    rows.push(["Notifications","",""],["Notifications","ID","Title / message / read"]);
-    for(const item of notifications){
-      rows.push(["Notifications",String(item._id),[item.title,item.message,item.read?"Read":"Unread"].filter(Boolean).join(" | ")]);
-    }
-    const csv=rows.map(row=>row.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-    res.setHeader("Content-Type","text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition",'attachment; filename="creovah-data-export.csv"');
-    res.send(csv);
+    const exported={account:{id:String(user._id),name:user.name,username:user.username,email:user.email,phone:user.phone,role:user.role||"",discoverySource:user.discoverySource||"",createdAt:user.createdAt},connections:safeUser(user).connections,content,notifications};
+    res.json(exported);
   } catch { res.status(500).json({message:"Unable to export your data right now."}); }
 });
 
