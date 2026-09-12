@@ -320,8 +320,6 @@ function buildMetaOAuthUrl(configId, state) {
     client_id: FB_APP_ID,
     redirect_uri: FB_REDIRECT_URI,
     config_id: configId,
-    response_type: "code",
-    override_default_response_type: "true",
     state
   });
   return `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
