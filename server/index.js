@@ -615,8 +615,31 @@ app.get("/api/account/export", auth, async (req,res)=>{
     const user=await findUserById(req.auth.id); if(!user)return res.status(404).json({message:"Account not found."});
     const content=await Content.find({userId:req.auth.id}).select("-__v").lean();
     const notifications=await Notification.find({userId:req.auth.id}).select("-__v").lean();
-    const exported={account:{id:String(user._id),name:user.name,username:user.username,email:user.email,phone:user.phone,role:user.role||"",discoverySource:user.discoverySource||"",createdAt:user.createdAt},connections:safeUser(user).connections,content,notifications};
-    res.json(exported);
+    const rows=[
+      ["Creovah data export","" ,""],
+      ["Account","Name",user.name||""],
+      ["Account","Username",user.username||""],
+      ["Account","Email",user.email||""],
+      ["Account","Phone",user.phone||""],
+      ["Account","Role",user.role||"user"],
+      ["Account","Created",user.createdAt?new Date(user.createdAt).toISOString():""],
+      ["Account","Discovery source",user.discoverySource||""],
+    ];
+    for(const [platform,connection] of Object.entries(safeUser(user).connections||{})){
+      rows.push(["Social account",platform,connection?.connected?"Connected":"Not connected"]);
+    }
+    rows.push(["Content","",""],["Content","ID","Title / text / status"]);
+    for(const item of content){
+      rows.push(["Content",String(item._id),[item.title,item.text||item.body,item.status].filter(Boolean).join(" | ")]);
+    }
+    rows.push(["Notifications","",""],["Notifications","ID","Title / message / read"]);
+    for(const item of notifications){
+      rows.push(["Notifications",String(item._id),[item.title,item.message,item.read?"Read":"Unread"].filter(Boolean).join(" | ")]);
+    }
+    const csv=rows.map(row=>row.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+    res.setHeader("Content-Type","text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition",'attachment; filename="creovah-data-export.csv"');
+    res.send(csv);
   } catch { res.status(500).json({message:"Unable to export your data right now."}); }
 });
 

@@ -27,3 +27,6 @@ body{margin:0;background:#faf7f2;color:#1c1712;font-family:"Inter",sans-serif}
 footer{font-size:10px;color:#9c8d7a}
 .auth-card a{text-decoration:none}
 @media(max-width:500px){.auth-shell{padding:22px 16px}.auth-card{padding:28px 22px}}
+@media(max-width:500px){.auth-card{width:100%;border-radius:16px;padding:25px 20px}.auth-shell{min-height:100dvh}.brand{font-size:22px}}
+
+@media(max-width:500px){.auth-card{width:100%;border-radius:16px;padding:25px 20px}.auth-shell{min-height:100dvh}.brand{font-size:22px}}

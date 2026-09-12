@@ -34,8 +34,8 @@
     <a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
   </div>
   <div class="nav-actions">
-    <a href="/auth.html" class="text-btn">Sign in</a>
-    <a href="/onboarding/" class="primary-btn small">Get started</a>
+    <a href="/auth.html" class="text-btn" id="legalSignIn">Sign in</a>
+    <a href="/onboarding/" class="primary-btn small" id="legalGetStarted">Get started</a>
   </div>
 </nav>
 
@@ -108,6 +108,7 @@
   </div>
 </footer>
 <script>
-fetch("/api/legal").then(r=>r.json()).then(d=>{if(d.legal && d.legal.privacy)document.getElementById("legalContent").innerHTML=d.legal.privacy;}).catch(()=>{});
+const legalToken=localStorage.getItem("creovah_token");
+if(legalToken){fetch("/api/me",{headers:{Authorization:"Bearer "+legalToken}}).then(r=>r.ok?r.json():null).then(d=>{if(d?.user){document.getElementById("legalSignIn")?.remove();document.getElementById("legalGetStarted")?.remove();}}).catch(()=>{});}
 </script></body>
 </html>

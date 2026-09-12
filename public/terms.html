@@ -13,7 +13,7 @@
 </style>
 </head>
 <body>
-<nav class="nav"><a href="/" class="brand">creovah</a><div class="nav-links"><a href="/#features">Features</a><a href="/#how">How it works</a><a href="/privacy.html">Privacy</a></div><div class="nav-actions"><a href="/auth.html" class="text-btn">Sign in</a><a href="/onboarding/" class="primary-btn small">Get started</a></div></nav>
+<nav class="nav"><a href="/" class="brand">creovah</a><div class="nav-links"><a href="/#features">Features</a><a href="/#how">How it works</a><a href="/privacy.html">Privacy</a></div><div class="nav-actions"><a href="/auth.html" class="text-btn" id="legalSignIn">Sign in</a><a href="/onboarding/" class="primary-btn small" id="legalGetStarted">Get started</a></div></nav>
 <main class="legal-wrap">
 <h1>Terms of Service</h1>
 <p class="updated">Last updated: September 11, 2026</p>
@@ -37,6 +37,7 @@
 </main>
 <footer><span class="brand">creovah</span><div><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/settings.html">Settings</a><a href="mailto:creovah@gmail.com">Contact</a></div></footer>
 <script>
-fetch("/api/legal").then(r=>r.json()).then(d=>{if(d.legal && d.legal.terms)document.getElementById("legalContent").innerHTML=d.legal.terms;}).catch(()=>{});
+const legalToken=localStorage.getItem("creovah_token");
+if(legalToken){fetch("/api/me",{headers:{Authorization:"Bearer "+legalToken}}).then(r=>r.ok?r.json():null).then(d=>{if(d?.user){document.getElementById("legalSignIn")?.remove();document.getElementById("legalGetStarted")?.remove();}}).catch(()=>{});}
 </script></body>
 </html>
