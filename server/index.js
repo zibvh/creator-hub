@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -51,7 +52,8 @@ const userSchema = new mongoose.Schema({
   socials: {
     instagram: { type: Boolean, default: false },
     facebook: { type: Boolean, default: false },
-    tiktok: { type: Boolean, default: false }
+    tiktok: { type: Boolean, default: false },
+    linkedin: { type: Boolean, default: false }
   },
   connections: {
     instagram: {
@@ -69,6 +71,15 @@ const userSchema = new mongoose.Schema({
       pageName: String,
       accessTokenEncrypted: String,
       tokenExpiresAt: Date
+    },
+    linkedin: {
+      connected: { type: Boolean, default: false },
+      memberId: String,
+      memberUrn: String,
+      name: String,
+      email: String,
+      accessTokenEncrypted: String,
+      tokenExpiresAt: Date
     }
   },
   notifications: { type: Boolean, default: false },
@@ -83,6 +94,10 @@ const contentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   title: { type: String, required: true, trim: true, maxlength: 120 },
   body: { type: String, default: "", maxlength: 5000 },
+  mediaUrl: { type: String, default: "" },
+  mediaUrn: { type: String, default: "" },
+  mediaType: { type: String, default: "" },
+  mediaAltText: { type: String, default: "", maxlength: 300 },
   platforms: { type: [String], default: [] },
   status: { type: String, enum: ["draft", "scheduled", "published"], default: "draft" },
   scheduledFor: { type: Date, default: null },
@@ -111,7 +126,7 @@ function safeUser(user) {
     phone: user.phone,
     role: user.role || "",
     discoverySource: user.discoverySource || "",
-    socials: user.socials || { instagram: false, facebook: false, tiktok: false },
+    socials: user.socials || { instagram: false, facebook: false, tiktok: false, linkedin: false },
     connections: {
       instagram: {
         connected: Boolean(conn.instagram && conn.instagram.connected),
@@ -120,6 +135,10 @@ function safeUser(user) {
       facebook: {
         connected: Boolean(conn.facebook && conn.facebook.connected),
         pageName: conn.facebook ? conn.facebook.pageName || "" : ""
+      },
+      linkedin: {
+        connected: Boolean(conn.linkedin && conn.linkedin.connected),
+        name: conn.linkedin ? conn.linkedin.name || "" : ""
       }
     },
     notifications: Boolean(user.notifications),
@@ -229,21 +248,50 @@ app.post("/api/content", auth, async (req, res) => {
   try {
     const title = String(req.body.title || "").trim();
     const body = String(req.body.body || "").trim();
-    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => ["instagram", "facebook", "tiktok"].includes(p)) : [];
-    const status = ["draft", "scheduled"].includes(req.body.status) ? req.body.status : "draft";
-    if (!title) return res.status(400).json({ message: "Give your post a title." });
+    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => ["instagram", "facebook", "tiktok", "linkedin"].includes(p)) : [];
+    const requestedStatus = ["draft", "scheduled"].includes(req.body.status) ? req.body.status : "draft";
+    const publishNow = Boolean(req.body.publishNow);
+    if (!title && !body) return res.status(400).json({ message: "Add a title or some content." });
     if (!platforms.length) return res.status(400).json({ message: "Choose at least one platform." });
     let scheduledFor = null;
-    if (status === "scheduled") {
+    if (requestedStatus === "scheduled") {
       scheduledFor = new Date(req.body.scheduledFor);
       if (Number.isNaN(scheduledFor.getTime())) return res.status(400).json({ message: "Choose a valid date and time." });
       if (scheduledFor <= new Date()) return res.status(400).json({ message: "Scheduled time must be in the future." });
     }
-    const item = await Content.create({ userId: req.auth.id, title, body, platforms, status, scheduledFor });
+    const item = await Content.create({
+      userId: req.auth.id, title: title || "LinkedIn post", body, platforms,
+      status: publishNow && platforms.includes("linkedin") ? "draft" : requestedStatus, scheduledFor,
+      mediaUrl: String(req.body.mediaUrl || "").trim(),
+      mediaUrn: String(req.body.mediaUrn || "").trim(),
+      mediaType: String(req.body.mediaType || "").trim(),
+      mediaAltText: String(req.body.mediaAltText || "").trim()
+    });
+
+    if (platforms.includes("linkedin")) {
+      const user = await findUserById(req.auth.id);
+      if (!user?.connections?.linkedin?.connected) {
+        await Content.deleteOne({ _id: item._id });
+        return res.status(400).json({ message: "Connect LinkedIn before publishing or scheduling LinkedIn content." });
+      }
+      if (item.mediaUrl && !item.mediaUrn) {
+        const media = await prepareLinkedInImage(user, item.mediaUrl);
+        item.mediaUrn = media.urn;
+        item.mediaType = "image";
+        await item.save();
+      }
+      if (publishNow) {
+        await publishLinkedInContent(user, item);
+        item.status = "published";
+        item.publishedAt = new Date();
+        item.scheduledFor = null;
+        await item.save();
+      }
+    }
     res.status(201).json({ item });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Unable to save this content right now." });
+    console.error("Content save/publish error:", error);
+    res.status(500).json({ message: error.message || "Unable to save this content right now." });
   }
 });
 
@@ -284,6 +332,184 @@ app.patch("/api/onboarding", auth, async (req, res) => {
     res.status(500).json({ message: "Unable to save your onboarding progress." });
   }
 });
+
+// --- LinkedIn OAuth + publishing ---
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
+const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
+const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || `${APP_BASE_URL}/api/connections/linkedin/callback`;
+const LINKEDIN_VERSION = process.env.LINKEDIN_VERSION || "202608";
+const LINKEDIN_SCOPES = "openid profile email w_member_social";
+
+async function linkedinFetch(url, options = {}) {
+  const headers = {
+    "Linkedin-Version": LINKEDIN_VERSION,
+    "X-Restli-Protocol-Version": "2.0.0",
+    ...(options.headers || {})
+  };
+  const response = await fetch(url, { ...options, headers });
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+  if (!response.ok) {
+    const detail = data.message || data.error_description || data.error || data.raw || `LinkedIn request failed (${response.status}).`;
+    throw new Error(String(detail));
+  }
+  return { response, data };
+}
+
+app.get("/api/connections/linkedin/start", auth, (req, res) => {
+  try {
+    if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) return res.status(500).json({ message: "LinkedIn connection is not configured on the server yet." });
+    const state = createOAuthState(req.auth.id, "linkedin");
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: LINKEDIN_CLIENT_ID,
+      redirect_uri: LINKEDIN_REDIRECT_URI,
+      state,
+      scope: LINKEDIN_SCOPES
+    });
+    res.json({ url: `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}` });
+  } catch (error) {
+    console.error("LinkedIn OAuth start error:", error);
+    res.status(500).json({ message: "Unable to start the LinkedIn connection." });
+  }
+});
+
+async function exchangeLinkedInCode(code) {
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: String(code),
+    client_id: LINKEDIN_CLIENT_ID,
+    client_secret: LINKEDIN_CLIENT_SECRET,
+    redirect_uri: LINKEDIN_REDIRECT_URI
+  });
+  const response = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.message || "LinkedIn token exchange failed.");
+  return { accessToken: data.access_token, expiresAt: data.expires_in ? new Date(Date.now() + Number(data.expires_in) * 1000) : null };
+}
+
+async function completeLinkedInConnection(userId, code) {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("Account not found.");
+  const { accessToken, expiresAt } = await exchangeLinkedInCode(code);
+  const profileResp = await fetch("https://api.linkedin.com/v2/userinfo", { headers: { Authorization: `Bearer ${accessToken}` } });
+  const profile = await profileResp.json().catch(() => ({}));
+  if (!profileResp.ok || !profile.sub) throw new Error(profile.message || profile.error || "Could not read the connected LinkedIn profile.");
+  const memberUrn = `urn:li:person:${profile.sub}`;
+  user.connections = user.connections || {};
+  user.connections.linkedin = {
+    connected: true,
+    memberId: profile.sub,
+    memberUrn,
+    name: profile.name || [profile.given_name, profile.family_name].filter(Boolean).join(" "),
+    email: profile.email || "",
+    accessTokenEncrypted: encryptToken(accessToken),
+    tokenExpiresAt: expiresAt
+  };
+  user.socials = { ...user.socials, linkedin: true };
+  await saveUser(user);
+  return { name: user.connections.linkedin.name || "LinkedIn" };
+}
+
+app.get("/api/connections/linkedin/callback", async (req, res) => {
+  const redirectToDashboard = (status, reason, message) => {
+    const params = new URLSearchParams({ connect: status });
+    if (reason) params.set("reason", reason);
+    if (message) params.set("message", String(message).slice(0, 500));
+    return res.redirect(`/dashboard.html?${params.toString()}`);
+  };
+  try {
+    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+    const pending = state ? consumeOAuthState(String(state)) : null;
+    if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
+    if (!code || !pending || pending.platform !== "linkedin") return redirectToDashboard("error", "session-expired");
+    const result = await completeLinkedInConnection(pending.userId, String(code));
+    return redirectToDashboard("linkedin-success", null, `${result.name} connected.`);
+  } catch (error) {
+    console.error("LinkedIn OAuth callback error:", error.message);
+    return redirectToDashboard("error", "unexpected", error.message || "LinkedIn returned an unexpected error while connecting your account.");
+  }
+});
+
+async function prepareLinkedInImage(user, mediaUrl) {
+  if (!/^https:\/\//i.test(mediaUrl)) throw new Error("LinkedIn media must use an HTTPS image URL.");
+  const conn = user.connections?.linkedin;
+  if (!conn?.connected || !conn.accessTokenEncrypted || !conn.memberUrn) throw new Error("LinkedIn is not connected.");
+  const token = decryptToken(conn.accessTokenEncrypted);
+  const source = await fetch(mediaUrl, { redirect: "follow" });
+  if (!source.ok) throw new Error("Could not fetch the image URL.");
+  const contentType = (source.headers.get("content-type") || "").split(";")[0].toLowerCase();
+  if (!["image/jpeg", "image/png", "image/gif"].includes(contentType)) throw new Error("LinkedIn v1 supports JPG, PNG, or GIF image URLs only.");
+  const length = Number(source.headers.get("content-length") || 0);
+  if (length > 10 * 1024 * 1024) throw new Error("Image is too large. Keep it under 10 MB.");
+  const buffer = Buffer.from(await source.arrayBuffer());
+  if (buffer.length > 10 * 1024 * 1024) throw new Error("Image is too large. Keep it under 10 MB.");
+
+  const init = await linkedinFetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ initializeUploadRequest: { owner: conn.memberUrn } })
+  });
+  const value = init.data.value || {};
+  if (!value.uploadUrl || !value.image) throw new Error("LinkedIn did not return an image upload URL.");
+  const upload = await fetch(value.uploadUrl, { method: "PUT", headers: { "Content-Type": contentType }, body: buffer });
+  if (!upload.ok) throw new Error(`LinkedIn image upload failed (${upload.status}).`);
+  return { urn: value.image, contentType };
+}
+
+async function publishLinkedInContent(user, item) {
+  const conn = user.connections?.linkedin;
+  if (!conn?.connected || !conn.accessTokenEncrypted || !conn.memberUrn) throw new Error("LinkedIn is not connected.");
+  const token = decryptToken(conn.accessTokenEncrypted);
+  const content = {
+    author: conn.memberUrn,
+    commentary: item.body || item.title || "",
+    visibility: "PUBLIC",
+    distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+    lifecycleState: "PUBLISHED",
+    isReshareDisabledByAuthor: false
+  };
+  if (item.mediaUrn) {
+    content.content = { media: { id: item.mediaUrn, ...(item.title ? { title: item.title } : {}), ...(item.mediaAltText ? { altText: item.mediaAltText } : {}) } };
+  }
+  const { response } = await linkedinFetch("https://api.linkedin.com/rest/posts", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(content)
+  });
+  return response.headers.get("x-restli-id") || "";
+}
+
+// Publish due LinkedIn schedules. The job is intentionally small and idempotent:
+// each item is marked published only after LinkedIn returns success.
+let schedulerBusy = false;
+async function processLinkedInSchedules() {
+  if (schedulerBusy || mongoose.connection.readyState !== 1) return;
+  schedulerBusy = true;
+  try {
+    const due = await Content.find({ platforms: "linkedin", status: "scheduled", scheduledFor: { $lte: new Date() } }).limit(10);
+    for (const item of due) {
+      try {
+        const user = await findUserById(item.userId);
+        if (!user) throw new Error("Account not found.");
+        await publishLinkedInContent(user, item);
+        item.status = "published";
+        item.publishedAt = new Date();
+        await item.save();
+      } catch (error) {
+        console.error(`LinkedIn scheduled post ${item._id} failed:`, error.message);
+      }
+    }
+  } catch (error) {
+    console.error("LinkedIn scheduler error:", error.message);
+  } finally { schedulerBusy = false; }
+}
+setInterval(processLinkedInSchedules, 60 * 1000);
 
 // --- Facebook / Instagram OAuth connect flows ---
 // Facebook and Instagram are intentionally separate connections. For the current
@@ -490,7 +716,7 @@ app.get("/api/connections/facebook/callback", async (req, res) => {
 app.post("/api/connections/:platform/disconnect", auth, async (req, res) => {
   try {
     const platform = req.params.platform;
-    if (!["instagram", "facebook"].includes(platform)) return res.status(400).json({ message: "Unknown platform." });
+    if (!["instagram", "facebook", "linkedin"].includes(platform)) return res.status(400).json({ message: "Unknown platform." });
     const user = await findUserById(req.auth.id);
     if (!user) return res.status(404).json({ message: "Account not found." });
 

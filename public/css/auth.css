@@ -27,5 +27,3 @@ body{margin:0;background:#faf7f2;color:#1c1712;font-family:"Inter",sans-serif}
 footer{font-size:10px;color:#9c8d7a}
 .auth-card a{text-decoration:none}
 @media(max-width:500px){.auth-shell{padding:22px 16px}.auth-card{padding:28px 22px}}
-
-.brand-lockup{display:inline-flex;align-items:center;gap:8px}.brand-logo{width:30px;height:30px;object-fit:cover;border-radius:9px;display:block}
