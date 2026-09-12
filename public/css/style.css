@@ -157,3 +157,5 @@ footer a:hover{color:var(--clay-dark)}
   footer{padding:24px 18px 32px}
   .card{width:150px}
 }
+
+.brand-lockup{display:inline-flex;align-items:center;gap:8px}.brand-logo{width:30px;height:30px;object-fit:cover;border-radius:9px;display:block}
