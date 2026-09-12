@@ -48,7 +48,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   phone: { type: String, required: true, trim: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, default: "" },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
+  profileType: { type: String, default: "" },
   discoverySource: { type: String, default: "" },
   socials: {
     instagram: { type: Boolean, default: false },
@@ -131,7 +132,8 @@ function safeUser(user) {
     username: user.username,
     email: user.email,
     phone: user.phone,
-    role: user.role || "",
+    role: user.role === "admin" ? "admin" : "user",
+    profileType: user.profileType || "",
     discoverySource: user.discoverySource || "",
     socials: user.socials || { instagram: false, facebook: false, tiktok: false, linkedin: false },
     connections: {
@@ -216,7 +218,8 @@ app.post("/api/auth/register", async (req, res) => {
       email: cleanEmail,
       phone: cleanPhone,
       passwordHash: await bcrypt.hash(password, 12),
-      role: "",
+      role: "user",
+      profileType: "",
       discoverySource: "",
       socials: { instagram: false, facebook: false, tiktok: false },
       notifications: false,
@@ -240,6 +243,24 @@ app.post("/api/auth/login", async (req, res) => {
     const user = await findUserByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.passwordHash)))
       return res.status(401).json({ message: "Email or password is incorrect." });
+    if (user.disabled) return res.status(403).json({ message: "This account has been disabled." });
+    if (user.role === "admin") return res.status(403).json({ message: "Use the admin sign-in page for this account." });
+    if (user.role !== "user") { user.role = "user"; await user.save(); }
+    res.json({ token: tokenFor(user), user: safeUser(user) });
+  } catch {
+    res.status(500).json({ message: "Unable to sign in right now." });
+  }
+});
+
+app.post("/api/admin/login", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const password = String(req.body.password || "");
+    const user = await findUserByEmail(email);
+    if (!user || !(await bcrypt.compare(password, user.passwordHash)))
+      return res.status(401).json({ message: "Email or password is incorrect." });
+    if (user.disabled) return res.status(403).json({ message: "This account has been disabled." });
+    if (user.role !== "admin") return res.status(403).json({ message: "This account does not have admin access." });
     res.json({ token: tokenFor(user), user: safeUser(user) });
   } catch {
     res.status(500).json({ message: "Unable to sign in right now." });
@@ -392,12 +413,13 @@ app.patch("/api/onboarding", auth, async (req, res) => {
     const user = await findUserById(req.auth.id);
     if (!user) return res.status(404).json({ message: "Account not found." });
 
-    const allowedRoles = ["influencer", "creator", "developer", "business", "agency", "marketer", "student", "other"];
+    const allowedProfileTypes = ["influencer", "creator", "developer", "business", "agency", "marketer", "student", "other"];
     const allowedSources = ["instagram", "tiktok", "facebook", "google", "friend", "search", "other"];
-    if (req.body.role && !allowedRoles.includes(req.body.role)) return res.status(400).json({ message: "Invalid role." });
+    if (req.body.role && !allowedProfileTypes.includes(req.body.role)) return res.status(400).json({ message: "Invalid profile type." });
     if (req.body.discoverySource && !allowedSources.includes(req.body.discoverySource)) return res.status(400).json({ message: "Invalid discovery source." });
 
-    if (req.body.role) user.role = req.body.role;
+    if (req.body.role) user.profileType = req.body.role;
+    if (user.role !== "admin") user.role = "user";
     if (req.body.discoverySource) user.discoverySource = req.body.discoverySource;
     if (typeof req.body.notifications === "boolean") user.notifications = req.body.notifications;
     if (req.body.complete === true) user.onboardingCompleted = true;
