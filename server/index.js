@@ -256,6 +256,32 @@ app.get("/api/content", auth, async (req, res) => {
   }
 });
 
+async function waitForLinkedInMedia(token, urn, kind, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  const encoded = encodeURIComponent(urn);
+  const base = kind === "video" ? "https://api.linkedin.com/rest/videos/" : "https://api.linkedin.com/rest/images/";
+  let lastStatus = "PROCESSING";
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(base + encoded, {
+        headers: { Authorization: `Bearer ${token}`, "X-Restli-Protocol-Version": "2.0.0" }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        lastStatus = String(data.status || "PROCESSING").toUpperCase();
+        if (lastStatus === "AVAILABLE") return data;
+        if (["PROCESSING_FAILED", "CLIENT_ERROR", "SERVER_ERROR", "INCOMPLETE"].includes(lastStatus)) {
+          throw new Error(`LinkedIn media processing failed (${lastStatus}).`);
+        }
+      }
+    } catch (error) {
+      if (error.message && error.message.includes("media processing failed")) throw error;
+    }
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+  throw new Error(`LinkedIn media is still processing (${lastStatus}). Please try publishing again in a moment.`);
+}
+
 app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "Choose a photo or video." });
@@ -270,6 +296,7 @@ app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, r
       if (!value.uploadUrl || !value.image) throw new Error("LinkedIn did not return an image upload URL.");
       const upload = await fetch(value.uploadUrl, { method: "PUT", headers: { "Content-Type": mime }, body: req.file.buffer });
       if (!upload.ok) throw new Error(`LinkedIn image upload failed (${upload.status}).`);
+      await waitForLinkedInMedia(token, value.image, "image");
       return res.json({ urn: value.image, mediaType: "image" });
     }
     if (mime === "video/mp4") {
@@ -286,6 +313,7 @@ app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, r
         partIds.push(etag);
       }
       await linkedinFetch("https://api.linkedin.com/rest/videos?action=finalizeUpload", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ finalizeUploadRequest: { video: value.video, uploadToken: value.uploadToken || "", uploadedPartIds: partIds } }) });
+      await waitForLinkedInMedia(token, value.video, "video");
       return res.json({ urn: value.video, mediaType: "video" });
     }
     return res.status(400).json({ message: "Use a JPG, PNG, GIF or MP4 file." });
