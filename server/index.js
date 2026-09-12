@@ -293,8 +293,10 @@ const FB_APP_ID = process.env.FB_APP_ID;
 const FB_APP_SECRET = process.env.FB_APP_SECRET;
 const FB_CONFIG_ID = process.env.FB_CONFIG_ID || "1528947972253797";
 const INSTAGRAM_CONFIG_ID = process.env.INSTAGRAM_CONFIG_ID;
-const FB_REDIRECT_URI = process.env.FB_REDIRECT_URI || `${APP_BASE_URL}/api/connections/facebook/callback`;
-const FB_GRAPH_VERSION = "v21.0";
+// Canonical production callback. Do not allow a stale Render environment variable
+// to silently change the redirect URI that Meta must whitelist.
+const FB_REDIRECT_URI = "https://creovah.onrender.com/api/connections/facebook/callback";
+const FB_GRAPH_VERSION = "v26.0";
 
 // Short-lived, in-memory map of OAuth state -> user/platform. State expires in
 // 10 minutes and is consumed once, preventing a callback from being replayed.
