@@ -468,9 +468,6 @@ app.patch("/api/content/:id", auth, async (req, res) => {
     if (!body) return res.status(400).json({ message: "Write something for your post." });
 
     const user = await findUserById(req.auth.id);
-    if (item.status === "published" && item.platforms.includes("tiktok") && item.externalPosts?.tiktok) {
-      return res.status(400).json({ message: "TikTok posts cannot be edited from Creovah after publishing." });
-    }
     if (item.status === "published" && item.platforms.includes("x") && item.externalPosts?.x) {
       const ageMs = Date.now() - new Date(item.publishedAt || item.updatedAt || Date.now()).getTime();
       if (ageMs > 30 * 60 * 1000) return res.status(400).json({ message: "X posts can only be edited within 30 minutes of publishing." });
@@ -499,7 +496,14 @@ app.patch("/api/content/:id", auth, async (req, res) => {
       item.scheduledFor = scheduledFor;
     }
     item.title = ""; item.body = body; await item.save();
-    res.json({ item, message: item.status === "published" && item.platforms.includes("x") ? "Your changes were saved on X and Creovah." : "Your changes were saved." });
+    let message = "Your changes were saved.";
+    if (item.status === "published" && item.platforms.includes("tiktok") && item.externalPosts?.tiktok) {
+      message = "Your changes were saved in Creovah. The published TikTok caption was not changed.";
+      if (item.platforms.includes("x") && item.externalPosts?.x) message = "Your changes were saved in Creovah and updated on X. The published TikTok caption was not changed.";
+    } else if (item.status === "published" && item.platforms.includes("x") && item.externalPosts?.x) {
+      message = "Your changes were saved on X and Creovah.";
+    }
+    res.json({ item, message });
   } catch (error) { res.status(500).json({ message: error.message || "Unable to update this post right now." }); }
 });
 

@@ -163,6 +163,12 @@ async function submitContent(action){
   if(!$('body').value.trim())return $('formError').textContent='Write something for your post.';
 
   if(action==='edit'||action==='scheduled-edit'){
+    const editingItem=items.find(x=>x._id===editingId);
+    const publishedTikTok=action==='edit' && editingItem?.status==='published' && editingItem?.platforms?.includes('tiktok') && editingItem?.externalPosts?.tiktok;
+    if(publishedTikTok){
+      const proceed=window.confirm('TikTok posts cannot be edited from Creovah. Your changes will be saved in Creovah, but the published TikTok caption will stay unchanged. Continue?');
+      if(!proceed)return;
+    }
     try{
       const payload={body:$('body').value.trim()};
       if(action==='scheduled-edit')payload.scheduledFor=scheduledDate;
