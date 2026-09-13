@@ -73,7 +73,7 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 <div class="composer-body"><section class="editor">
 <div class="field"><label>Publish to</label><div class="platforms" id="platformChoices"></div></div>
 <div class="field"><label for="body">Caption / body</label><textarea id="body" maxlength="5000" placeholder="Write something worth sharing..."></textarea><div class="counter"><span id="count">0</span> / 5000</div></div>
-<div class="field"><label>Media <span style="font-weight:500;color:#9a9289">(optional)</span></label><label class="upload" for="mediaFile"><div class="upload-row"><div class="upload-icon"><i data-lucide="image-plus"></i></div><div><strong>Add a photo or video</strong><small>JPG, PNG, WEBP, GIF, MP4, MOV or WEBM · up to 200 MB</small></div></div><input id="mediaFile" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" multiple hidden></label><div class="media-preview" id="mediaPreview"><button class="remove-media" id="removeMedia" type="button" aria-label="Remove media"><i data-lucide="x"></i></button><img id="mediaImg" alt=""><video id="mediaVideo" controls playsinline></video><div id="mediaStatus" style="position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.68);color:#fff;border-radius:8px;padding:6px 8px;font-size:9px;max-width:calc(100% - 20px)"></div></div><div id="mediaEditNote" style="display:none;margin-top:10px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#f7f4ef;color:var(--muted);font-size:10px;line-height:1.5"><i data-lucide="info" style="width:13px;vertical-align:-3px;margin-right:5px"></i>Published LinkedIn media cannot be changed here. Create a new post if you want to use different media.</div><div class="upload-progress" id="uploadProgress"><span id="uploadBar"></span></div><div class="alt">Media is uploaded only when you publish or schedule.</div></div>
+<div class="field"><label>Media <span style="font-weight:500;color:#9a9289">(optional)</span></label><label class="upload" for="mediaFile"><div class="upload-row"><div class="upload-icon"><i data-lucide="image-plus"></i></div><div><strong>Add a photo or video</strong><small>JPG, PNG, WEBP, GIF, MP4, MOV or WEBM · up to 200 MB</small></div></div><input id="mediaFile" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" multiple hidden></label><div class="media-preview" id="mediaPreview"><button class="remove-media" id="removeMedia" type="button" aria-label="Remove media"><i data-lucide="x"></i></button><img id="mediaImg" alt=""><video id="mediaVideo" controls playsinline></video><div id="mediaStatus" style="position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.68);color:#fff;border-radius:8px;padding:6px 8px;font-size:9px;max-width:calc(100% - 20px)"></div></div><div id="mediaEditNote" style="display:none;margin-top:10px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#f7f4ef;color:var(--muted);font-size:10px;line-height:1.5"><i data-lucide="info" style="width:13px;vertical-align:-3px;margin-right:5px"></i>Published LinkedIn media cannot be changed here. Create a new post if you want to use different media.</div><div class="upload-progress" id="uploadProgress"><span id="uploadBar"></span></div><div class="alt">Media is saved securely so drafts, scheduled posts and publishing can reuse it.</div></div>
 <div class="field"><label for="altText">Alt text <span style="font-weight:500;color:#9a9289">(optional)</span></label><input id="altText" maxlength="300" placeholder="Describe the image for accessibility"></div>
 <div class="schedule-row" id="scheduleRow"><div><label for="scheduleDate">Date</label><input id="scheduleDate" type="date"></div><div><label for="scheduleTime">Time</label><input id="scheduleTime" type="time"></div></div>
 </section>
@@ -131,7 +131,7 @@ function populateModal(item,mode){
   renderPreviewTabs();updatePreview();lucide.createIcons();
 }
 function continueDraft(id){const item=items.find(x=>x._id===id);if(item)populateModal(item,'draft')}
-async function editContent(id){const item=items.find(x=>x._id===id);if(!item)return;const mode=item.status==='scheduled'?'scheduled-edit':'edit';populateModal(item,mode);if(item.mediaUrn){$('mediaPreview').classList.add('show');$('mediaImg').style.display='none';$('mediaVideo').style.display='none';$('mediaStatus').textContent='Loading existing media…';try{const r=await fetch('/api/content/'+id+'/media-preview',{headers:{Authorization:'Bearer '+t}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Existing media is not available yet.');if(d.mediaType==='video'){$('mediaVideo').src=d.url;$('mediaVideo').style.display='block'}else{$('mediaImg').src=d.url;$('mediaImg').style.display='block'}$('mediaStatus').textContent='Existing media · this media cannot be changed here.'}catch(e){$('mediaPreview').classList.remove('show');$('mediaStatus').textContent=e.message||'Existing media could not be loaded.'}}}
+async function editContent(id){const item=items.find(x=>x._id===id);if(!item)return;const mode=item.status==='scheduled'?'scheduled-edit':'edit';populateModal(item,mode);if(item.mediaAssets?.length||item.mediaUrn){$('mediaPreview').classList.add('show');$('mediaImg').style.display='none';$('mediaVideo').style.display='none';$('mediaStatus').textContent='Loading existing media…';try{const r=await fetch('/api/content/'+id+'/media-preview',{headers:{Authorization:'Bearer '+t}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Existing media is not available yet.');if(d.mediaType==='video'){$('mediaVideo').src=d.url;$('mediaVideo').style.display='block'}else{$('mediaImg').src=d.url;$('mediaImg').style.display='block'}$('mediaStatus').textContent='Existing media · this media cannot be changed here.'}catch(e){$('mediaPreview').classList.remove('show');$('mediaStatus').textContent=e.message||'Existing media could not be loaded.'}}}
 
 function resetMedia(markRemoved=false){selectedFiles=[];if($('mediaImg').src)URL.revokeObjectURL($('mediaImg').src);if($('mediaVideo').src)URL.revokeObjectURL($('mediaVideo').src);$('mediaImg').src='';$('mediaVideo').src='';$('mediaImg').style.display='none';$('mediaVideo').style.display='none';$('mediaPreview').classList.remove('show');$('mediaFile').value='';selectedFile=null;uploadedMedia=null;$('uploadProgress').classList.remove('show');$('uploadBar').style.width='0';updatePreview()}
 function selectedPlatforms(){return [...document.querySelectorAll('#platformChoices .platform.on')].map(x=>x.dataset.platform)}
@@ -150,58 +150,71 @@ async function prepareTikTokImage(file){
   });
 }
 $('mediaFile').onchange=async()=>{const files=Array.from($('mediaFile').files||[]);if(!files.length)return;if(editingId)return;for(const f of files){if(!/^(image\/(jpeg|png|gif|webp)|video\/(mp4|quicktime|webm))$/.test(f.type))return notice('Unsupported media','Choose JPG, PNG, WEBP, GIF, MP4, MOV or WEBM files.','failure');if(f.size>200*1024*1024)return notice('File too large','Keep each media file under 200 MB.','failure')}if(files.some(f=>f.type.startsWith('video/'))&&files.length>1)return notice('One video at a time','TikTok supports one video per post. Use multiple images for a photo post.','failure');if(files.some(f=>f.type.startsWith('video/'))&&files.some(f=>f.type.startsWith('image/')))return notice('Choose one media type','Use either photos or one video for a TikTok post.','failure');if(files.length>35)return notice('Too many photos','TikTok supports up to 35 photos in one photo post.','failure');if($('mediaImg').src)URL.revokeObjectURL($('mediaImg').src);if($('mediaVideo').src)URL.revokeObjectURL($('mediaVideo').src);selectedFiles=files;selectedFile=files[0];uploadedMedia=null;const url=URL.createObjectURL(files[0]);if(files[0].type.startsWith('image/')){$('mediaImg').src=url;$('mediaImg').style.display='block';$('mediaVideo').style.display='none'}else{$('mediaVideo').src=url;$('mediaVideo').style.display='block';$('mediaImg').style.display='none'}$('mediaStatus').textContent=files.length>1?`${files.length} photos selected`:'';$('mediaPreview').classList.add('show');updatePreview()};$('removeMedia').onclick=()=>resetMedia(!!editingId);
-async function uploadMedia(){const f=selectedFile;if(!f)return null;if(uploadedMedia)return uploadedMedia;const platforms=selectedPlatforms();if(platforms.includes('linkedin')&&platforms.includes('x'))throw new Error('For now, choose either LinkedIn or X when adding media.');const target=platforms.find(p=>p!=='tiktok');if(!target)return null;const kind=f.type.startsWith('video/')?'video':'image';const label=kind==='video'?'video':'image';const status=$('uploadStatus'),bar=$('uploadStatusBar'),pct=$('uploadStatusPercent'),title=$('uploadStatusTitle'),msg=$('uploadStatusMessage');status.classList.add('show','busy');title.textContent=`Uploading ${label}`;msg.textContent=`Your ${label} is being uploaded to ${target==='x'?'X':'LinkedIn'}. This can take a moment. Keep this window open.`;bar.style.width='12%';pct.textContent='12%';$('uploadProgress').classList.add('show');$('uploadBar').style.width='12%';const timer=setInterval(()=>{const current=parseInt(bar.style.width)||12;const next=Math.min(current+(current<45?8:current<72?4:2),88);bar.style.width=next+'%';pct.textContent=next+'%';$('uploadBar').style.width=next+'%'},700);try{const fd=new FormData();fd.append('media',f);const r=await fetch(target==='x'?'/api/x/media':'/api/linkedin/media',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Media upload failed.');clearInterval(timer);bar.style.width='100%';pct.textContent='100%';$('uploadBar').style.width='100%';title.textContent='Media uploaded';msg.textContent=`${target==='x'?'X':'LinkedIn'} received the file. Finishing your post…`;uploadedMedia={urn:d.urn,type:d.mediaType,name:f.name,size:f.size};setTimeout(()=>status.classList.remove('show','busy'),900);return uploadedMedia}catch(e){clearInterval(timer);bar.style.width='0';pct.textContent='0%';status.classList.remove('busy');title.textContent='Upload failed';msg.textContent=e.message||'The media could not be uploaded.';throw e}}
-function localSchedule(){const d=$('scheduleDate').value,tm=$('scheduleTime').value;if(!d||!tm)return null;return new Date(`${d}T${tm}`).toISOString()}
-async function submitContent(action){
-  $('formError').textContent='';const platforms=selectedPlatforms();
-  if(!platforms.length)return $('formError').textContent='Choose at least one connected platform.';
-  if((action==='publish'||action==='schedule')&&platforms.some(p=>!['linkedin','x','tiktok'].includes(p)))return $('formError').textContent='Publishing is currently available for LinkedIn, X and TikTok.';
-  if((action==='publish'||action==='schedule')&&platforms.includes('tiktok')&&!user.connections.tiktok?.connected)return $('formError').textContent='Connect TikTok before publishing.';
-  if(action==='schedule'&&platforms.includes('tiktok'))return $('formError').textContent='TikTok scheduling is not available yet. Publish TikTok posts now instead.';
-  if(action==='publish'&&platforms.includes('tiktok')&&!selectedFile&&!(editingId&&items.find(x=>x._id===editingId)?.mediaUrn))return $('formError').textContent='TikTok requires media. Add a photo or video before publishing.';
-  
-  if((action==='publish'||action==='schedule'||action==='scheduled-edit')&&platforms.includes('tiktok')&&!selectedFile&&!uploadedMedia&&!(editingId&&items.find(x=>x._id===editingId)?.mediaUrn))return $('formError').textContent='TikTok requires media. Add a photo or video before publishing or scheduling.';
-  if((action==='publish'||action==='schedule')&&platforms.includes('linkedin')&&!user.connections.linkedin.connected)return $('formError').textContent='Connect LinkedIn before publishing.';
-  if((action==='publish'||action==='schedule')&&platforms.includes('x')&&!user.connections.x?.connected)return $('formError').textContent='Connect X before publishing.';
-  const scheduledDate=localSchedule();
-  if(action==='schedule'&&!scheduledDate)return $('formError').textContent='Choose a date and time.';
-  if(action==='schedule'&&new Date(scheduledDate)<=new Date())return $('formError').textContent='Choose a future time.';
-  if(action==='scheduled-edit'&&!scheduledDate)return $('formError').textContent='Choose a date and time.';
-  if(action==='scheduled-edit'&&new Date(scheduledDate)<=new Date())return $('formError').textContent='Choose a future time.';
-  if(!$('body').value.trim())return $('formError').textContent='Write something for your post.';
-
-  if(action==='edit'||action==='scheduled-edit'){
-    const editingItem=items.find(x=>x._id===editingId);
-    const publishedTikTok=action==='edit' && editingItem?.status==='published' && editingItem?.platforms?.includes('tiktok') && editingItem?.externalPosts?.tiktok;
-    if(publishedTikTok){
-      const proceed=window.confirm('TikTok posts cannot be edited from Creovah. Your changes will be saved in Creovah, but the published TikTok caption will stay unchanged. Continue?');
-      if(!proceed)return;
+async function uploadMedia(){
+  if(!selectedFiles.length)return [];
+  const status=$('uploadStatus'),bar=$('uploadStatusBar'),pct=$('uploadStatusPercent'),title=$('uploadStatusTitle'),msg=$('uploadStatusMessage');
+  status.classList.add('show','busy'); title.textContent='Saving media'; msg.textContent='Your media is being securely saved to Creovah.'; bar.style.width='12%'; pct.textContent='12%'; $('uploadProgress').classList.add('show'); $('uploadBar').style.width='12%';
+  const timer=setInterval(()=>{const current=parseInt(bar.style.width)||12;const next=Math.min(current+(current<55?7:current<82?3:1),90);bar.style.width=next+'%';pct.textContent=next+'%';$('uploadBar').style.width=next+'%'},700);
+  try{
+    const fd=new FormData(); selectedFiles.forEach(f=>fd.append('media',f));
+    const r=await fetch('/api/media/upload',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});
+    const d=await r.json().catch(()=>({})); if(!r.ok)throw new Error(d.message||'Media could not be saved.');
+    clearInterval(timer); bar.style.width='100%';pct.textContent='100%';$('uploadBar').style.width='100%';title.textContent='Media saved';msg.textContent='Your media is ready for drafts, scheduling and publishing.';
+    uploadedMedia=d.assets||[]; setTimeout(()=>status.classList.remove('show','busy'),900); return uploadedMedia;
+  }catch(e){clearInterval(timer);bar.style.width='0';pct.textContent='0%';$('uploadBar').style.width='0';status.classList.remove('busy');title.textContent='Media save failed';msg.textContent=e.message||'The media could not be saved.';throw e}
+}
+function clientValidate(platforms,action){
+  const errors=[]; const body=$('body').value.trim(); const files=selectedFiles||[]; const old=editingId?items.find(x=>x._id===editingId):null; const hasExisting=!!(old?.mediaAssets?.length||old?.mediaUrl||old?.mediaUrn); const hasMedia=files.length>0||hasExisting;
+  const images=files.filter(f=>f.type.startsWith('image/')); const videos=files.filter(f=>f.type.startsWith('video/'));
+  const add=(p,m)=>errors.push({platform:p,message:m});
+  for(const p of platforms){
+    const name=p==='x'?'X':p[0].toUpperCase()+p.slice(1);
+    const max=p==='x'?280:p==='linkedin'?3000:p==='instagram'?2200:p==='facebook'?63206:4000;
+    if(body.length>max)add(p,`${name} allows up to ${max.toLocaleString()} characters. Your post has ${body.length.toLocaleString()}.`);
+    if((p==='tiktok'||p==='instagram')&&!hasMedia)add(p,`${name} requires a photo or video for this post.`);
+    if(p==='tiktok'){
+      if(videos.length&&images.length)add(p,'Use photos or one video, not both, for a TikTok post.');
+      if(videos.length>1)add(p,'TikTok video posts use one video at a time.');
+      if(images.length>35)add(p,'TikTok photo posts support up to 35 images.');
+      if(action==='schedule')add(p,'TikTok scheduling is not available yet. Publish TikTok posts now instead.');
     }
-    try{
-      const payload={body:$('body').value.trim()};
-      if(action==='scheduled-edit')payload.scheduledFor=scheduledDate;
-      const r=await fetch('/api/content/'+editingId,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(payload)});
-      const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to update this post.');
-      const i=items.findIndex(x=>x._id===editingId);if(i>=0)items[i]=d.item;renderContent();updateStats();closeModal();notice(action==='scheduled-edit'?'Schedule updated':'Post updated',d.message||'Your changes were saved.','success')
-    }catch(e){notice('Update failed',e.message,'failure')}return;
+    if(p==='x'){if(images.length>4)add(p,'X allows up to 4 images in one post.');if(videos.length>1)add(p,'X allows one video in a post.');}
+    if(p==='linkedin'&&(images.length>1||videos.length>1||images.length&&videos.length))add(p,'LinkedIn posts support one media item here. Use one photo or one video.');
+    if((p==='facebook'||p==='instagram')&&(action==='publish'||action==='schedule'))add(p,`${name} publishing is not available in this build yet.`);
   }
-
+  return errors;
+}
+function showValidation(errors){
+  if(!errors.length){$('formError').textContent='';return false}
+  $('formError').innerHTML='<strong>Fix these before continuing:</strong><ul>'+errors.map(e=>`<li><b>${esc(e.platform==='x'?'X':e.platform[0].toUpperCase()+e.platform.slice(1))}:</b> ${esc(e.message)}</li>`).join('')+'</ul>';return true;
+}
+async function submitContent(action){
+  $('formError').textContent=''; const platforms=selectedPlatforms();
+  if(!platforms.length){$('formError').textContent='Choose at least one connected platform.';return}
+  if(action==='schedule'&&platforms.includes('tiktok')){if(showValidation([{platform:'tiktok',message:'TikTok scheduling is not available yet. Publish TikTok posts now instead.'}]))return}
+  if((action==='publish'||action==='schedule')&&platforms.some(p=>!user.connections?.[p]?.connected)){const missing=platforms.filter(p=>!user.connections?.[p]?.connected).map(p=>({platform:p,message:`Connect ${p==='x'?'X':p[0].toUpperCase()+p.slice(1)} before publishing or scheduling.`}));if(showValidation(missing))return}
+  if(!$('body').value.trim()){$('formError').textContent='Write something for your post.';return}
+  const scheduledDate=localSchedule();
+  if((action==='schedule'||action==='scheduled-edit')&&!scheduledDate){$('formError').textContent='Choose a date and time.';return}
+  if((action==='schedule'||action==='scheduled-edit')&&new Date(scheduledDate)<=new Date()){$('formError').textContent='Choose a future time.';return}
+  if(action==='publish'||action==='schedule'){
+    const validation=clientValidate(platforms,action); if(showValidation(validation))return;
+  }
+  if(action==='edit'||action==='scheduled-edit'){
+    const editingItem=items.find(x=>x._id===editingId); const publishedTikTok=action==='edit'&&editingItem?.status==='published'&&editingItem?.platforms?.includes('tiktok')&&editingItem?.externalPosts?.tiktok;
+    if(publishedTikTok&&!window.confirm('TikTok posts cannot be edited from Creovah. Your changes will be saved in Creovah, but the published TikTok caption will stay unchanged. Continue?'))return;
+    try{const payload={body:$('body').value.trim()};if(action==='scheduled-edit')payload.scheduledFor=scheduledDate;if(editingItem?.status==='draft'&&selectedFiles.length)payload.mediaAssets=await uploadMedia();const r=await fetch('/api/content/'+editingId,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to update this post.');const i=items.findIndex(x=>x._id===editingId);if(i>=0)items[i]=d.item;renderContent();updateStats();closeModal();notice(action==='scheduled-edit'?'Schedule updated':'Post updated',d.message||'Your changes were saved.','success')}catch(e){notice('Update failed',e.message||'Unable to update this post.','failure')}return;
+  }
   const btn=action==='publish'?$('publishBtn'):action==='schedule'?$('scheduleBtn'):$('draftBtn');btn?.classList.add('is-loading');
   try{
-    let media=null; let tiktokPublishId='';
-    if(action==='publish'&&platforms.includes('tiktok')&&selectedFiles.length){
-      const filesForTikTok=[];for(const f of selectedFiles){if(f.type.startsWith('image/'))filesForTikTok.push(await prepareTikTokImage(f));else filesForTikTok.push(f)}
-      const fd=new FormData();for(const f of filesForTikTok)fd.append('media',f);fd.append('body',$('body').value.trim());
-      const r=await fetch('/api/tiktok/publish',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});
-      const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'TikTok publishing failed.');
-      tiktokPublishId=d.publishId||'';
-    } else if((action==='publish'||action==='schedule')&&selectedFile)media=await uploadMedia();
-    if(action==='publish'&&platforms.includes('tiktok')&&selectedFile&&platforms.some(p=>p!=='tiktok')) media=await uploadMedia();
-    const payload={body:$('body').value.trim(),platforms,status:action==='schedule'?'scheduled':'draft',publishNow:action==='publish',scheduledFor:action==='schedule'?scheduledDate:null,mediaUrn:media?.urn||'',mediaType:media?.type||'',mediaAltText:$('altText').value.trim(),tiktokPublishId};
-    if(editingId && action==='draft'){
-      const r=await fetch('/api/content/'+editingId,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({body:payload.body})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to save the draft.');const i=items.findIndex(x=>x._id===editingId);if(i>=0)items[i]=d.item;renderContent();closeModal();notice('Draft saved','Your changes were saved.','success');return;
+    let mediaAssets=[];
+    if(selectedFiles.length)mediaAssets=await uploadMedia();
+    else if(editingId){const existing=items.find(x=>x._id===editingId);mediaAssets=existing?.mediaAssets||[]}
+    const payload={body:$('body').value.trim(),platforms,status:action==='schedule'?'scheduled':'draft',publishNow:action==='publish',scheduledFor:action==='schedule'?scheduledDate:null,mediaAssets,mediaAltText:$('altText').value.trim()};
+    if(editingId&&action==='draft'){
+      const r=await fetch('/api/content/'+editingId,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({body:payload.body,mediaAssets})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to save the draft.');const i=items.findIndex(x=>x._id===editingId);if(i>=0)items[i]=d.item;renderContent();closeModal();notice('Draft saved','Your changes were saved.','success');return;
     }
-    const r=await fetch('/api/content',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to complete this action.');items.unshift(d.item);renderContent();updateStats();closeModal();notice(action==='publish'?'Published':action==='schedule'?'Scheduled':'Draft saved',action==='publish'?'Your post was published successfully.':action==='schedule'?'Your post is scheduled.':'Your draft has been saved.','success');
+    const r=await fetch('/api/content',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok){if(Array.isArray(d.errors)&&d.errors.length)showValidation(d.errors);throw new Error(d.message||'Unable to complete this action.');}items.unshift(d.item);renderContent();updateStats();closeModal();if(Array.isArray(d.errors)&&d.errors.length){notice('Published with issues',d.message+'\n\n'+d.errors.map(e=>`${e.platform}: ${e.message}`).join('\n'),'failure')}else notice(action==='publish'?'Published':action==='schedule'?'Scheduled':'Draft saved',action==='publish'?'Your post was published successfully.':action==='schedule'?'Your post is scheduled.':'Your draft has been saved.','success');
   }catch(e){notice(action==='publish'?'Publish failed':action==='schedule'?'Schedule failed':'Draft failed',e.message||'Unable to complete this action.','failure')}finally{btn?.classList.remove('is-loading');setTimeout(()=>$('uploadStatus').classList.remove('show','busy'),900)}
 }
 

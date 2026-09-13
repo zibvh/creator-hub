@@ -14,6 +14,9 @@ const PORT = process.env.PORT || 10000;
 const JWT_SECRET = process.env.JWT_SECRET || "change-me";
 const publicDir = path.join(__dirname, "..", "public");
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://creovah.onrender.com";
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "";
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -122,7 +125,9 @@ const contentSchema = new mongoose.Schema({
   mediaUrn: { type: String, default: "" },
   mediaType: { type: String, default: "" },
   mediaAltText: { type: String, default: "", maxlength: 300 },
+  mediaAssets: { type: [mongoose.Schema.Types.Mixed], default: [] },
   externalPostUrn: { type: String, default: "" },
+  publishErrors: { type: [mongoose.Schema.Types.Mixed], default: [] },
   externalPosts: {
     linkedin: { type: String, default: "" },
     x: { type: String, default: "" },
@@ -304,6 +309,112 @@ app.post("/api/admin/login", async (req, res) => {
   }
 });
 
+
+function cloudinaryReady() {
+  return Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
+}
+function cloudinarySignature(params) {
+  const canonical = Object.keys(params).sort().filter(k => params[k] !== undefined && params[k] !== null && params[k] !== "")
+    .map(k => `${k}=${params[k]}`).join("&");
+  return crypto.createHash("sha1").update(canonical + CLOUDINARY_API_SECRET).digest("hex");
+}
+async function uploadToCloudinary(file, userId) {
+  if (!cloudinaryReady()) throw new Error("Cloudinary is not configured yet. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Render.");
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = `creovah/${String(userId)}`;
+  const signature = cloudinarySignature({ folder, timestamp });
+  const form = new FormData();
+  form.append("file", new Blob([file.buffer], { type: file.mimetype || "application/octet-stream" }), file.originalname || "media");
+  form.append("api_key", CLOUDINARY_API_KEY);
+  form.append("timestamp", String(timestamp));
+  form.append("folder", folder);
+  form.append("signature", signature);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUDINARY_CLOUD_NAME)}/auto/upload`, { method: "POST", body: form });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.secure_url) throw new Error(data?.error?.message || `Cloudinary upload failed (${response.status}).`);
+  return {
+    publicId: data.public_id || "", secureUrl: data.secure_url, resourceType: data.resource_type || "auto",
+    format: data.format || "", bytes: Number(data.bytes || file.size || 0), width: Number(data.width || 0), height: Number(data.height || 0),
+    duration: Number(data.duration || 0), originalName: file.originalname || "media", mimeType: file.mimetype || ""
+  };
+}
+function mediaProxyToken(asset) {
+  const payload = Buffer.from(JSON.stringify({ url: asset.secureUrl, exp: Date.now() + 60 * 60 * 1000 })).toString("base64url");
+  const sig = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+function mediaProxyUrl(asset) { return `${APP_BASE_URL}/api/media/public/${mediaProxyToken(asset)}`; }
+app.get("/api/media/public/:token", async (req, res) => {
+  try {
+    const [payload, sig] = String(req.params.token || "").split(".");
+    if (!payload || !sig) return res.status(404).end();
+    const expected = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return res.status(403).end();
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!data.url || Number(data.exp) < Date.now() || !/^https:\/\//i.test(data.url)) return res.status(404).end();
+    const upstream = await fetch(data.url, { redirect: "follow" });
+    if (!upstream.ok) return res.status(upstream.status).end();
+    res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/octet-stream");
+    res.setHeader("Cache-Control", "public, max-age=300");
+    if (upstream.headers.get("content-length")) res.setHeader("Content-Length", upstream.headers.get("content-length"));
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    res.end(buffer);
+  } catch { res.status(404).end(); }
+});
+
+app.post("/api/media/upload", auth, mediaUpload.array("media", 35), async (req, res) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (!files.length) return res.status(400).json({ message: "Choose at least one photo or video." });
+    const allowed = new Set(["image/jpeg","image/png","image/gif","image/webp","video/mp4","video/quicktime","video/webm"]);
+    for (const file of files) {
+      if (!allowed.has(String(file.mimetype || "").toLowerCase())) return res.status(400).json({ message: `${file.originalname || "This file"} is not a supported photo or video format.` });
+      if (file.size > 200 * 1024 * 1024) return res.status(400).json({ message: `${file.originalname || "This file"} is larger than 200 MB.` });
+    }
+    const assets = [];
+    for (const file of files) assets.push(await uploadToCloudinary(file, req.auth.id));
+    res.json({ assets });
+  } catch (error) {
+    console.error("Cloudinary media upload error:", error);
+    res.status(500).json({ message: error.message || "Unable to save your media right now." });
+  }
+});
+
+const PLATFORM_RULES = {
+  linkedin: { name: "LinkedIn", maxText: 3000, maxImages: 1, maxVideos: 1, mediaRequired: false },
+  x: { name: "X", maxText: 280, maxImages: 4, maxVideos: 1, mediaRequired: false },
+  instagram: { name: "Instagram", maxText: 2200, maxImages: 10, maxVideos: 1, mediaRequired: true },
+  facebook: { name: "Facebook", maxText: 63206, maxImages: 10, maxVideos: 1, mediaRequired: false },
+  tiktok: { name: "TikTok", maxText: 4000, maxImages: 35, maxVideos: 1, mediaRequired: true }
+};
+function validateContentForPlatforms({ platforms, body, mediaAssets, action }) {
+  const errors = [];
+  const text = String(body || "");
+  const assets = Array.isArray(mediaAssets) ? mediaAssets : [];
+  const images = assets.filter(a => String(a?.mimeType || "").startsWith("image/") || String(a?.resourceType || "") === "image");
+  const videos = assets.filter(a => String(a?.mimeType || "").startsWith("video/") || String(a?.resourceType || "") === "video");
+  for (const platform of platforms) {
+    const rule = PLATFORM_RULES[platform]; if (!rule) continue;
+    if (text.length > rule.maxText) errors.push({ platform, message: `${rule.name} allows up to ${rule.maxText.toLocaleString()} characters. Your post has ${text.length.toLocaleString()}.` });
+    if (rule.mediaRequired && !assets.length) errors.push({ platform, message: `${rule.name} requires a photo or video for this post.` });
+    if (images.length > rule.maxImages) errors.push({ platform, message: `${rule.name} allows up to ${rule.maxImages} photo${rule.maxImages === 1 ? "" : "s"} in one post.` });
+    if (videos.length > rule.maxVideos) errors.push({ platform, message: `${rule.name} allows ${rule.maxVideos === 1 ? "one video" : `${rule.maxVideos} videos`} in one post.` });
+    if (platform === "tiktok" && images.length && videos.length) errors.push({ platform, message: "TikTok posts must contain photos or one video, not a mixture of both." });
+    if (platform === "tiktok" && videos.length && action === "schedule") errors.push({ platform, message: "TikTok scheduling is not available yet. Publish TikTok posts now instead." });
+    if (platform === "tiktok" && images.some(a => Number(a?.bytes || 0) > 20 * 1024 * 1024)) errors.push({ platform, message: "Each TikTok photo must be 20 MB or smaller." });
+    if (platform === "tiktok" && videos.some(a => Number(a?.bytes || 0) > 4 * 1024 * 1024 * 1024)) errors.push({ platform, message: "TikTok videos must be 4 GB or smaller." });
+    if ((platform === "instagram" || platform === "facebook") && (action === "publish" || action === "schedule")) errors.push({ platform, message: `${rule.name} publishing is not connected to Creovah yet.` });
+  }
+  return errors;
+}
+function validateMediaAssetsOwnership(assets, userId) {
+  const prefix = `/creovah/${String(userId)}/`;
+  return (Array.isArray(assets) ? assets : []).every(asset => String(asset?.publicId || "").includes(prefix) && /^https:\/\//i.test(String(asset?.secureUrl || "")));
+}
+function validationMessage(errors) {
+  return errors.map(e => `${PLATFORM_RULES[e.platform]?.name || e.platform}: ${e.message}`).join("\n");
+}
+
 app.get("/api/content", auth, async (req, res) => {
   try {
     const items = await Content.find({ userId: req.auth.id }).sort({ scheduledFor: 1, createdAt: -1 }).limit(100).lean();
@@ -378,16 +489,15 @@ app.post("/api/linkedin/media", auth, mediaUpload.single("media"), async (req, r
 
 app.post("/api/content", auth, async (req, res) => {
   try {
-    const title = String(req.body.title || "").trim();
     const body = String(req.body.body || "").trim();
-    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => ["instagram", "facebook", "tiktok", "linkedin", "x"].includes(p)) : [];
+    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => Object.prototype.hasOwnProperty.call(PLATFORM_RULES, p)) : [];
     const requestedStatus = ["draft", "scheduled"].includes(req.body.status) ? req.body.status : "draft";
     const publishNow = Boolean(req.body.publishNow);
+    const action = publishNow ? "publish" : requestedStatus === "scheduled" ? "schedule" : "draft";
+    const mediaAssets = Array.isArray(req.body.mediaAssets) ? req.body.mediaAssets : [];
+    if (!validateMediaAssetsOwnership(mediaAssets, req.auth.id)) return res.status(400).json({ message: "One or more media files are not valid Creovah media." });
     if (!body) return res.status(400).json({ message: "Write something for your post." });
     if (!platforms.length) return res.status(400).json({ message: "Choose at least one platform." });
-    if ((publishNow || requestedStatus === "scheduled") && platforms.includes("tiktok") && !String(req.body.tiktokPublishId || req.body.mediaType || "").trim()) return res.status(400).json({ message: "TikTok requires media. Add a photo or video before publishing or scheduling." });
-    if (requestedStatus === "scheduled" && platforms.includes("tiktok")) return res.status(400).json({ message: "TikTok scheduling is not available yet. Publish TikTok posts now instead." });
-    if (publishNow && platforms.includes("tiktok") && !String(req.body.tiktokPublishId || "").trim()) return res.status(400).json({ message: "TikTok media must be uploaded before publishing." });
     let scheduledFor = null;
     if (requestedStatus === "scheduled") {
       scheduledFor = new Date(req.body.scheduledFor);
@@ -399,33 +509,41 @@ app.post("/api/content", auth, async (req, res) => {
     for (const platform of platforms) {
       if (platform === "linkedin" && !user.connections?.linkedin?.connected) return res.status(400).json({ message: "Connect LinkedIn before publishing or scheduling LinkedIn content." });
       if (platform === "x" && !user.connections?.x?.connected) return res.status(400).json({ message: "Connect X before publishing or scheduling X content." });
-      if (platform === "tiktok" && !user.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing TikTok content." });
+      if (platform === "tiktok" && !user.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing or scheduling TikTok content." });
+    }
+    if (action !== "draft") {
+      const errors = validateContentForPlatforms({ platforms, body, mediaAssets, action });
+      if (errors.length) return res.status(422).json({ message: "Fix the platform requirements before continuing.", errors });
     }
     const item = await Content.create({
-      userId: req.auth.id, title: "", body, platforms,
-      status: requestedStatus, scheduledFor,
-      mediaUrl: String(req.body.mediaUrl || "").trim(),
-      mediaUrn: String(req.body.mediaUrn || "").trim(),
-      mediaType: String(req.body.mediaType || "").trim(),
-      mediaAltText: String(req.body.mediaAltText || "").trim()
+      userId: req.auth.id, title: "", body, platforms, status: requestedStatus, scheduledFor,
+      mediaUrl: mediaAssets[0]?.secureUrl || "", mediaUrn: "", mediaType: mediaAssets[0]?.resourceType === "video" || String(mediaAssets[0]?.mimeType || "").startsWith("video/") ? "video" : mediaAssets.length ? "image" : "",
+      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets
     });
-
     if (publishNow) {
-      const externalPosts = {};
-      if (platforms.includes("linkedin")) externalPosts.linkedin = await publishLinkedInContent(user, item);
-      if (platforms.includes("x")) externalPosts.x = await publishXContent(user, item);
-      if (platforms.includes("tiktok")) externalPosts.tiktok = String(req.body.tiktokPublishId || "");
-      item.externalPosts = externalPosts;
-      item.externalPostUrn = externalPosts.linkedin || externalPosts.x || externalPosts.tiktok || "";
-      item.status = "published";
-      item.publishedAt = new Date();
-      item.scheduledFor = null;
-      await item.save();
+      const externalPosts = {}; const publishErrors = [];
+      for (const platform of platforms) {
+        try {
+          if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, item);
+          else if (platform === "x") externalPosts.x = await publishXContent(user, item);
+          else if (platform === "tiktok") externalPosts.tiktok = await publishTikTokContent(user, item);
+        } catch (platformError) {
+          console.error(`${platform} publish failed for ${item._id}:`, platformError);
+          publishErrors.push({ platform, message: platformError.message || `Unable to publish to ${platform}.` });
+        }
+      }
+      item.externalPosts = externalPosts; item.externalPostUrn = Object.values(externalPosts).find(Boolean) || "";
+      if (publishErrors.length && Object.values(externalPosts).some(Boolean)) {
+        item.status = "published"; item.publishedAt = new Date(); item.scheduledFor = null; await item.save();
+        return res.status(207).json({ item, message: "Published to some selected platforms, but one or more platforms could not be published.", errors: publishErrors });
+      }
+      if (publishErrors.length) { await Content.deleteOne({ _id: item._id }); return res.status(502).json({ message: "Creovah could not publish this post.", errors: publishErrors }); }
+      item.status = "published"; item.publishedAt = new Date(); item.scheduledFor = null; await item.save();
     }
     res.status(201).json({ item });
   } catch (error) {
     console.error("Content save/publish error:", error);
-    res.status(500).json({ message: error.message || "Unable to save this content right now." });
+    res.status(500).json({ message: error.message || "Unable to complete this action right now." });
   }
 });
 
@@ -433,30 +551,16 @@ app.get("/api/content/:id/media-preview", auth, async (req, res) => {
   try {
     const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id }).lean();
     if (!item) return res.status(404).json({ message: "Content not found." });
+    if (Array.isArray(item.mediaAssets) && item.mediaAssets.length) return res.json({ url: item.mediaAssets[0].secureUrl, mediaType: item.mediaAssets[0].resourceType === "video" ? "video" : "image" });
     if (!item.mediaUrn) return res.status(404).json({ message: "This post has no media." });
-    const user = await findUserById(req.auth.id);
-    const conn = user?.connections?.linkedin;
+    const user = await findUserById(req.auth.id); const conn = user?.connections?.linkedin;
     if (!conn?.connected || !conn.accessTokenEncrypted) return res.status(400).json({ message: "Reconnect LinkedIn to load the existing media." });
-    const token = decryptToken(conn.accessTokenEncrypted);
-    const endpoint = item.mediaType === "video" ? "videos" : "images";
-    const encoded = encodeURIComponent(item.mediaUrn);
-    let response = await fetch(`https://api.linkedin.com/rest/${endpoint}/${encoded}`, {
-      headers: { Authorization: `Bearer ${token}`, "Linkedin-Version": LINKEDIN_VERSION, "X-Restli-Protocol-Version": "2.0.0" }
-    });
-    let data = await response.json().catch(() => ({}));
-    // w_member_social is write-only for versioned image GETs, but LinkedIn still
-    // supports legacy image GETs for member-owned media.
-    if (!response.ok && endpoint === "images") {
-      response = await fetch(`https://api.linkedin.com/rest/images/${encoded}`, { headers: { Authorization: `Bearer ${token}` } });
-      data = await response.json().catch(() => ({}));
-    }
-    if (!response.ok || !data.downloadUrl) {
-      return res.status(response.status || 404).json({ message: data.message || "LinkedIn has not made this media available yet." });
-    }
-    res.json({ url: data.downloadUrl, mediaType: item.mediaType, expiresAt: data.downloadUrlExpiresAt || null });
-  } catch (error) {
-    res.status(500).json({ message: error.message || "Unable to load the existing media." });
-  }
+    const token = decryptToken(conn.accessTokenEncrypted); const endpoint=item.mediaType==="video"?"videos":"images"; const encoded=encodeURIComponent(item.mediaUrn);
+    let response=await fetch(`https://api.linkedin.com/rest/${endpoint}/${encoded}`,{headers:{Authorization:`Bearer ${token}`,"Linkedin-Version":LINKEDIN_VERSION,"X-Restli-Protocol-Version":"2.0.0"}}); let data=await response.json().catch(()=>({}));
+    if(!response.ok&&endpoint==="images"){response=await fetch(`https://api.linkedin.com/rest/images/${encoded}`,{headers:{Authorization:`Bearer ${token}`}});data=await response.json().catch(()=>({}));}
+    if(!response.ok||!data.downloadUrl)return res.status(response.status||404).json({message:data.message||"LinkedIn has not made this media available yet."});
+    res.json({url:data.downloadUrl,mediaType:item.mediaType,expiresAt:data.downloadUrlExpiresAt||null});
+  } catch(error){res.status(500).json({message:error.message||"Unable to load the existing media."});}
 });
 
 app.patch("/api/content/:id", auth, async (req, res) => {
@@ -488,12 +592,16 @@ app.patch("/api/content/:id", auth, async (req, res) => {
       }
     }
 
-    if (item.status === "scheduled" && item.platforms.includes("tiktok") && !item.mediaUrn) return res.status(400).json({ message: "TikTok requires media. Add a photo or video before publishing or scheduling." });
     if (item.status === "scheduled" && Object.prototype.hasOwnProperty.call(req.body, "scheduledFor")) {
       const scheduledFor = new Date(req.body.scheduledFor);
       if (Number.isNaN(scheduledFor.getTime())) return res.status(400).json({ message: "Choose a valid date and time." });
       if (scheduledFor <= new Date()) return res.status(400).json({ message: "Scheduled time must be in the future." });
       item.scheduledFor = scheduledFor;
+    }
+    if (item.status === "draft" && Array.isArray(req.body.mediaAssets)) {
+      item.mediaAssets = req.body.mediaAssets;
+      item.mediaUrl = item.mediaAssets[0]?.secureUrl || "";
+      item.mediaType = item.mediaAssets[0]?.resourceType === "video" || String(item.mediaAssets[0]?.mimeType || "").startsWith("video/") ? "video" : item.mediaAssets.length ? "image" : "";
     }
     item.title = ""; item.body = body; await item.save();
     let message = "Your changes were saved.";
@@ -506,6 +614,16 @@ app.patch("/api/content/:id", auth, async (req, res) => {
     res.json({ item, message });
   } catch (error) { res.status(500).json({ message: error.message || "Unable to update this post right now." }); }
 });
+
+async function deleteFromCloudinary(asset) {
+  if (!cloudinaryReady() || !asset?.publicId) return;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const params = { public_id: asset.publicId, timestamp, invalidate: true, resource_type: asset.resourceType === "video" ? "video" : "image" };
+  const signature = cloudinarySignature(params);
+  const form = new FormData(); form.append("public_id", asset.publicId); form.append("timestamp", String(timestamp)); form.append("invalidate", "true"); form.append("api_key", CLOUDINARY_API_KEY); form.append("signature", signature);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUDINARY_CLOUD_NAME)}/${params.resource_type}/destroy`, { method:"POST", body:form });
+  if (!response.ok) throw new Error(`Cloudinary media deletion failed (${response.status}).`);
+}
 
 app.delete("/api/content/:id", auth, async (req, res) => {
   try {
@@ -521,6 +639,9 @@ app.delete("/api/content/:id", auth, async (req, res) => {
     if (item.platforms.includes("x") && external.x && user?.connections?.x?.connected) {
       const x = await getXAccessToken(user);
       await xApi("DELETE", `/2/tweets/${encodeURIComponent(external.x)}`, x.token);
+    }
+    if (Array.isArray(item.mediaAssets)) {
+      for (const asset of item.mediaAssets) { try { await deleteFromCloudinary(asset); } catch (mediaError) { console.error("Cloudinary cleanup failed:", mediaError.message); } }
     }
     await Content.deleteOne({ _id: item._id });
     res.json({ message: "Post deleted." });
@@ -659,6 +780,35 @@ app.get("/api/connections/linkedin/callback", async (req, res) => {
   }
 });
 
+
+async function fetchAssetBuffer(asset) {
+  if (!asset?.secureUrl) throw new Error("Saved media is missing its Cloudinary URL.");
+  const response = await fetch(asset.secureUrl, { redirect: "follow" });
+  if (!response.ok) throw new Error(`Could not retrieve saved media (${response.status}).`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return { buffer, mimeType: String(asset.mimeType || response.headers.get("content-type") || "application/octet-stream").split(";")[0].toLowerCase(), size: buffer.length, originalname: asset.originalName || "media" };
+}
+async function prepareLinkedInMediaFromAsset(user, asset) {
+  const file = await fetchAssetBuffer(asset);
+  const mime = file.mimeType;
+  if (["image/jpeg","image/png","image/gif"].includes(mime)) {
+    const conn = user.connections?.linkedin; const token = decryptToken(conn.accessTokenEncrypted);
+    if (file.size > 10*1024*1024) throw new Error("LinkedIn images must be 10 MB or smaller.");
+    const init = await linkedinFetch("https://api.linkedin.com/rest/images?action=initializeUpload", { method:"POST", headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"}, body:JSON.stringify({initializeUploadRequest:{owner:conn.memberUrn}}) });
+    const value=init.data.value||{}; if(!value.uploadUrl||!value.image)throw new Error("LinkedIn did not return an image upload URL.");
+    const up=await fetch(value.uploadUrl,{method:"PUT",headers:{"Content-Type":mime},body:file.buffer}); if(!up.ok)throw new Error(`LinkedIn image upload failed (${up.status}).`);
+    return {urn:value.image,type:"image"};
+  }
+  if (mime === "video/mp4") {
+    const conn=user.connections?.linkedin; const token=decryptToken(conn.accessTokenEncrypted);
+    const init=await linkedinFetch("https://api.linkedin.com/rest/videos?action=initializeUpload",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({initializeUploadRequest:{owner:conn.memberUrn,videoSize:file.size,uploadCaptions:false,uploadThumbnail:false}})});
+    const value=init.data.value||{}; if(!value.uploadInstructions?.length||!value.video)throw new Error("LinkedIn did not return video upload instructions.");
+    for(const instruction of value.uploadInstructions){const chunk=file.buffer.subarray(Number(instruction.firstByte||0),Number(instruction.lastByte||file.size-1)+1);const up=await fetch(instruction.uploadUrl,{method:"PUT",headers:{"Content-Type":"video/mp4","Content-Length":String(chunk.length)},body:chunk});if(!up.ok)throw new Error(`LinkedIn video upload failed (${up.status}).`);}
+    await waitForLinkedInMedia(token,value.video,"video"); return {urn:value.video,type:"video"};
+  }
+  throw new Error("LinkedIn supports JPG, PNG, GIF images and MP4 video in Creovah.");
+}
+
 async function prepareLinkedInImage(user, mediaUrl) {
   if (!/^https:\/\//i.test(mediaUrl)) throw new Error("LinkedIn media must use an HTTPS image URL.");
   const conn = user.connections?.linkedin;
@@ -688,23 +838,12 @@ async function prepareLinkedInImage(user, mediaUrl) {
 async function publishLinkedInContent(user, item) {
   const conn = user.connections?.linkedin;
   if (!conn?.connected || !conn.accessTokenEncrypted || !conn.memberUrn) throw new Error("LinkedIn is not connected.");
+  let mediaUrn = "";
+  if (Array.isArray(item.mediaAssets) && item.mediaAssets.length) mediaUrn = (await prepareLinkedInMediaFromAsset(user, item.mediaAssets[0])).urn;
   const token = decryptToken(conn.accessTokenEncrypted);
-  const content = {
-    author: conn.memberUrn,
-    commentary: item.body || "",
-    visibility: "PUBLIC",
-    distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
-    lifecycleState: "PUBLISHED",
-    isReshareDisabledByAuthor: false
-  };
-  if (item.mediaUrn) {
-    content.content = { media: { id: item.mediaUrn, ...(item.title ? { title: item.title } : {}), ...(item.mediaAltText ? { altText: item.mediaAltText } : {}) } };
-  }
-  const { response } = await linkedinFetch("https://api.linkedin.com/rest/posts", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(content)
-  });
+  const content = { author: conn.memberUrn, commentary: item.body || "", visibility: "PUBLIC", distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] }, lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false };
+  if (mediaUrn) content.content = { media: { id: mediaUrn, ...(item.mediaAltText ? { altText: item.mediaAltText } : {}) } };
+  const { response } = await linkedinFetch("https://api.linkedin.com/rest/posts", { method:"POST", headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"}, body:JSON.stringify(content) });
   return response.headers.get("x-restli-id") || "";
 }
 
@@ -718,11 +857,16 @@ async function processSchedules() {
     for (const item of due) {
       try {
         const user = await findUserById(item.userId); if (!user) throw new Error("Account not found.");
-        const externalPosts = {};
-        if (item.platforms.includes("linkedin")) externalPosts.linkedin = await publishLinkedInContent(user, item);
-        if (item.platforms.includes("x")) externalPosts.x = await publishXContent(user, item);
-        item.externalPosts = externalPosts;
-        item.externalPostUrn = externalPosts.linkedin || externalPosts.x || "";
+        const externalPosts = {}; const publishErrors = [];
+        for (const platform of item.platforms) {
+          try {
+            if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, item);
+            else if (platform === "x") externalPosts.x = await publishXContent(user, item);
+          } catch (platformError) { publishErrors.push({ platform, message: platformError.message || "Publishing failed." }); }
+        }
+        item.externalPosts = externalPosts; item.externalPostUrn = Object.values(externalPosts).find(Boolean) || "";
+        if (publishErrors.length && Object.values(externalPosts).some(Boolean)) item.publishErrors = publishErrors;
+        if (publishErrors.length && !Object.values(externalPosts).some(Boolean)) { console.error(`Scheduled post ${item._id} failed:`, publishErrors); continue; }
         item.status = "published"; item.publishedAt = new Date(); item.scheduledFor = null; await item.save();
       } catch (error) { console.error(`Scheduled post ${item._id} failed:`, error.message); }
     }
@@ -932,7 +1076,11 @@ app.post("/api/x/media", auth, mediaUpload.single("media"), async (req,res)=>{
 async function publishXContent(user,item) {
   const { token } = await getXAccessToken(user);
   const payload = { text: item.body || "" };
-  if (item.mediaUrn) payload.media = { media_ids: [String(item.mediaUrn)] };
+  if (Array.isArray(item.mediaAssets) && item.mediaAssets.length) {
+    const mediaIds=[];
+    for (const asset of item.mediaAssets) mediaIds.push(String((await uploadXMedia(user, await fetchAssetBuffer(asset))).id));
+    payload.media = { media_ids: mediaIds };
+  }
   const result = await xApi("POST", "/2/tweets", token, payload);
   return result?.data?.id || "";
 }
@@ -1047,119 +1195,38 @@ async function queryTikTokCreator(token) {
   });
 }
 
-async function publishTikTokPhoto(user, item, files) {
-  if (!Array.isArray(files) || !files.length) throw new Error("TikTok requires at least one photo.");
-  if (files.length > 35) throw new Error("TikTok photo posts support up to 35 images.");
-  const allowed = new Set(["image/jpeg", "image/webp"]);
-  for (const file of files) {
-    const mime = String(file.mimetype || "").toLowerCase();
-    if (!allowed.has(mime)) throw new Error("TikTok photo posts use JPEG or WEBP images. PNG and GIF images are converted before sending.");
-    if (file.size > 20 * 1024 * 1024) throw new Error("Each TikTok image must be 20 MB or smaller.");
-  }
+async function publishTikTokPhoto(user, item, assets) {
+  if (!Array.isArray(assets) || !assets.length) throw new Error("TikTok requires at least one photo.");
   const { token } = await getTikTokAccessToken(user);
-  const creator = await queryTikTokCreator(token);
-  const info = creator.data || {};
-  const privacyOptions = Array.isArray(info.privacy_level_options) ? info.privacy_level_options : [];
-  const privacy = privacyOptions.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : privacyOptions[0];
-  if (!privacy) throw new Error("TikTok did not return an available privacy setting.");
-
-  const uploadDir = path.join(publicDir, "uploads", "tiktok");
-  require("fs").mkdirSync(uploadDir, { recursive: true });
-  const urls = [];
-  const savedPaths = [];
-  try {
-    for (const file of files) {
-      const ext = String(file.mimetype).toLowerCase() === "image/webp" ? "webp" : "jpg";
-      const name = `${crypto.randomUUID()}.${ext}`;
-      const fullPath = path.join(uploadDir, name);
-      require("fs").writeFileSync(fullPath, file.buffer);
-      savedPaths.push(fullPath);
-      urls.push(`${APP_BASE_URL}/uploads/tiktok/${name}`);
-    }
-
-    const init = await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=UTF-8" },
-      body: JSON.stringify({
-        post_info: {
-          title: (item.body || "").slice(0, 90),
-          description: (item.body || "").slice(0, 4000),
-          privacy_level: privacy,
-          disable_comment: false
-        },
-        source_info: { source: "PULL_FROM_URL", photo_cover_index: 0, photo_images: urls },
-        post_mode: "DIRECT_POST",
-        media_type: "PHOTO"
-      })
-    });
-    const publishId = init.data?.publish_id;
-    if (!publishId) throw new Error("TikTok did not return a photo publish ID.");
-    return publishId;
-  } finally {
-    for (const filePath of savedPaths) {
-      setTimeout(() => { try { require("fs").unlinkSync(filePath); } catch {} }, 2 * 60 * 60 * 1000);
-    }
-  }
+  const creator = await queryTikTokCreator(token); const info=creator.data||{};
+  const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[]; const privacy=options.includes("PUBLIC_TO_EVERYONE")?"PUBLIC_TO_EVERYONE":options[0];
+  if(!privacy)throw new Error("TikTok did not return an available privacy setting.");
+  const urls=[];
+  for(const asset of assets){if(!asset?.secureUrl)throw new Error("TikTok photo is missing its saved media URL."); if(Number(asset.bytes||0)>20*1024*1024)throw new Error("Each TikTok photo must be 20 MB or smaller."); urls.push(mediaProxyUrl(asset));}
+  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,90),description:(item.body||"").slice(0,4000),privacy_level:privacy,disable_comment:false,auto_add_music:false},source_info:{source:"PULL_FROM_URL",photo_cover_index:0,photo_images:urls},post_mode:"DIRECT_POST",media_type:"PHOTO"})});
+  const id=init.data?.publish_id;if(!id)throw new Error("TikTok did not return a photo publish ID.");return id;
 }
-
-async function publishTikTokVideo(user, item, file) {
-  if (!file) throw new Error("TikTok requires a video. Add a video before publishing.");
-  const mime = String(file.mimetype || "").toLowerCase();
-  if (!["video/mp4", "video/quicktime", "video/webm"].includes(mime)) throw new Error("TikTok publishing currently requires an MP4, MOV or WEBM video.");
-  if (file.size > 4 * 1024 * 1024 * 1024) throw new Error("TikTok videos must be 4 GB or smaller.");
-  const { token } = await getTikTokAccessToken(user);
-  const creator = await queryTikTokCreator(token);
-  const info = creator.data || {};
-  const privacyOptions = Array.isArray(info.privacy_level_options) ? info.privacy_level_options : [];
-  const privacy = privacyOptions.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : privacyOptions[0];
-  if (!privacy) throw new Error("TikTok did not return an available privacy setting.");
-  const chunkSize = Math.min(64 * 1024 * 1024, Math.max(5 * 1024 * 1024, 10 * 1024 * 1024));
-  const totalChunks = Math.ceil(file.size / chunkSize);
-  const init = await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=UTF-8" },
-    body: JSON.stringify({
-      post_info: { title: (item.body || "").slice(0, 2200), privacy_level: privacy, disable_duet: false, disable_comment: false, disable_stitch: false },
-      source_info: { source: "FILE_UPLOAD", video_size: file.size, chunk_size: chunkSize, total_chunk_count: totalChunks }
-    })
-  });
-  const uploadUrl = init.data?.upload_url;
-  const publishId = init.data?.publish_id;
-  if (!uploadUrl || !publishId) throw new Error("TikTok did not return an upload URL.");
-  for (let offset = 0; offset < file.size; offset += chunkSize) {
-    const end = Math.min(offset + chunkSize, file.size) - 1;
-    const chunk = file.buffer.subarray(offset, end + 1);
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": mime, "Content-Length": String(chunk.length), "Content-Range": `bytes ${offset}-${end}/${file.size}` },
-      body: chunk
-    });
-    if (!uploadResponse.ok) {
-      const detail = await uploadResponse.text().catch(() => "");
-      throw new Error(`TikTok video upload failed (${uploadResponse.status}).${detail ? ` ${detail.slice(0, 200)}` : ""}`);
-    }
-  }
+async function publishTikTokVideo(user,item,asset){
+  if(!asset)throw new Error("TikTok requires a video. Add a video before publishing.");
+  const file=await fetchAssetBuffer(asset); const mime=file.mimeType;
+  if(!["video/mp4","video/quicktime","video/webm"].includes(mime))throw new Error("TikTok video must be MP4, MOV or WEBM.");
+  if(file.size>4*1024*1024*1024)throw new Error("TikTok videos must be 4 GB or smaller.");
+  const {token}=await getTikTokAccessToken(user); const creator=await queryTikTokCreator(token); const info=creator.data||{}; const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[]; const privacy=options.includes("PUBLIC_TO_EVERYONE")?"PUBLIC_TO_EVERYONE":options[0]; if(!privacy)throw new Error("TikTok did not return an available privacy setting.");
+  const chunkSize=10*1024*1024,totalChunks=Math.ceil(file.size/chunkSize);
+  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,2200),privacy_level:privacy,disable_duet:false,disable_comment:false,disable_stitch:false},source_info:{source:"FILE_UPLOAD",video_size:file.size,chunk_size:chunkSize,total_chunk_count:totalChunks}})});
+  const uploadUrl=init.data?.upload_url,publishId=init.data?.publish_id;if(!uploadUrl||!publishId)throw new Error("TikTok did not return an upload URL.");
+  for(let offset=0;offset<file.size;offset+=chunkSize){const end=Math.min(offset+chunkSize,file.size)-1;const chunk=file.buffer.subarray(offset,end+1);const r=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":mime,"Content-Length":String(chunk.length),"Content-Range":`bytes ${offset}-${end}/${file.size}`},body:chunk});if(!r.ok){const detail=await r.text().catch(()=>"");throw new Error(`TikTok video upload failed (${r.status}).${detail?` ${detail.slice(0,250)}`:""}`);}}
   return publishId;
 }
+async function publishTikTokContent(user,item){
+  const assets=Array.isArray(item.mediaAssets)?item.mediaAssets:[]; if(!assets.length)throw new Error("TikTok requires a photo or video.");
+  const videos=assets.filter(a=>String(a?.mimeType||"").startsWith("video/")||a?.resourceType==="video");
+  if(videos.length)return publishTikTokVideo(user,item,videos[0]);
+  return publishTikTokPhoto(user,item,assets);
+}
 
-app.post("/api/tiktok/publish", auth, mediaUpload.array("media", 35), async (req, res) => {
-  try {
-    const user = await findUserById(req.auth.id);
-    if (!user?.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing." });
-    const files = Array.isArray(req.files) ? req.files : [];
-    if (!files.length) return res.status(400).json({ message: "TikTok requires at least one photo or video." });
-    const body = String(req.body.body || "").trim();
-    if (!body) return res.status(400).json({ message: "Write something for your TikTok post." });
-    const hasVideo = files.some(f => String(f.mimetype || "").toLowerCase().startsWith("video/"));
-    const hasImage = files.some(f => String(f.mimetype || "").toLowerCase().startsWith("image/"));
-    if (hasVideo && hasImage) return res.status(400).json({ message: "Use either photos or a video for a TikTok post, not both." });
-    if (hasVideo && files.length !== 1) return res.status(400).json({ message: "TikTok video posts use one video at a time." });
-    const publishId = hasVideo ? await publishTikTokVideo(user, { body }, files[0]) : await publishTikTokPhoto(user, { body }, files);
-    res.json({ publishId, mediaType: hasVideo ? "video" : "image", mediaCount: files.length });
-  } catch (error) {
-    console.error("TikTok publish error:", error);
-    res.status(500).json({ message: error.message || "Unable to publish to TikTok." });
-  }
+app.post("/api/tiktok/publish", auth, async (req,res)=>{
+  return res.status(410).json({message:"TikTok publishing now uses Creovah's saved media flow. Save/upload the media through the composer and publish the post from there."});
 });
 
 app.get("/api/connections/tiktok/callback", async (req, res) => {
