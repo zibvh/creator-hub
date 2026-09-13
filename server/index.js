@@ -55,7 +55,8 @@ const userSchema = new mongoose.Schema({
     instagram: { type: Boolean, default: false },
     facebook: { type: Boolean, default: false },
     tiktok: { type: Boolean, default: false },
-    linkedin: { type: Boolean, default: false }
+    linkedin: { type: Boolean, default: false },
+    x: { type: Boolean, default: false }
   },
   connections: {
     instagram: {
@@ -82,6 +83,26 @@ const userSchema = new mongoose.Schema({
       email: String,
       accessTokenEncrypted: String,
       tokenExpiresAt: Date
+    },
+    x: {
+      connected: { type: Boolean, default: false },
+      userId: String,
+      username: String,
+      name: String,
+      accessTokenEncrypted: String,
+      refreshTokenEncrypted: String,
+      tokenExpiresAt: Date,
+      refreshTokenExpiresAt: Date
+    },
+    tiktok: {
+      connected: { type: Boolean, default: false },
+      openId: String,
+      username: String,
+      name: String,
+      accessTokenEncrypted: String,
+      refreshTokenEncrypted: String,
+      tokenExpiresAt: Date,
+      refreshTokenExpiresAt: Date
     }
   },
   notifications: { type: Boolean, default: false },
@@ -95,13 +116,18 @@ const User = mongoose.model("User", userSchema);
 
 const contentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
-  title: { type: String, required: true, trim: true, maxlength: 120 },
+  title: { type: String, default: "", trim: true, maxlength: 120 },
   body: { type: String, default: "", maxlength: 5000 },
   mediaUrl: { type: String, default: "" },
   mediaUrn: { type: String, default: "" },
   mediaType: { type: String, default: "" },
   mediaAltText: { type: String, default: "", maxlength: 300 },
   externalPostUrn: { type: String, default: "" },
+  externalPosts: {
+    linkedin: { type: String, default: "" },
+    x: { type: String, default: "" },
+    tiktok: { type: String, default: "" }
+  },
   platforms: { type: [String], default: [] },
   status: { type: String, enum: ["draft", "scheduled", "published"], default: "draft" },
   scheduledFor: { type: Date, default: null },
@@ -136,7 +162,7 @@ function safeUser(user) {
     role: user.role === "admin" ? "admin" : "user",
     profileType: user.profileType || "",
     discoverySource: user.discoverySource || "",
-    socials: user.socials || { instagram: false, facebook: false, tiktok: false, linkedin: false },
+    socials: user.socials || { instagram: false, facebook: false, tiktok: false, linkedin: false, x: false },
     connections: {
       instagram: {
         connected: Boolean(conn.instagram && conn.instagram.connected),
@@ -149,6 +175,16 @@ function safeUser(user) {
       linkedin: {
         connected: Boolean(conn.linkedin && conn.linkedin.connected),
         name: conn.linkedin ? conn.linkedin.name || "" : ""
+      },
+      x: {
+        connected: Boolean(conn.x && conn.x.connected),
+        name: conn.x ? conn.x.name || "" : "",
+        username: conn.x ? conn.x.username || "" : ""
+      },
+      tiktok: {
+        connected: Boolean(conn.tiktok && conn.tiktok.connected),
+        name: conn.tiktok ? conn.tiktok.name || "" : "",
+        username: conn.tiktok ? conn.tiktok.username || "" : ""
       }
     },
     notifications: Boolean(user.notifications),
@@ -222,7 +258,7 @@ app.post("/api/auth/register", async (req, res) => {
       role: "user",
       profileType: "",
       discoverySource: "",
-      socials: { instagram: false, facebook: false, tiktok: false },
+      socials: { instagram: false, facebook: false, tiktok: false, linkedin: false, x: false },
       notifications: false,
       onboardingCompleted: false
     };
@@ -344,46 +380,47 @@ app.post("/api/content", auth, async (req, res) => {
   try {
     const title = String(req.body.title || "").trim();
     const body = String(req.body.body || "").trim();
-    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => ["instagram", "facebook", "tiktok", "linkedin"].includes(p)) : [];
+    const platforms = Array.isArray(req.body.platforms) ? req.body.platforms.filter(p => ["instagram", "facebook", "tiktok", "linkedin", "x"].includes(p)) : [];
     const requestedStatus = ["draft", "scheduled"].includes(req.body.status) ? req.body.status : "draft";
     const publishNow = Boolean(req.body.publishNow);
-    if (!title && !body) return res.status(400).json({ message: "Add a title or some content." });
+    if (!body) return res.status(400).json({ message: "Write something for your post." });
     if (!platforms.length) return res.status(400).json({ message: "Choose at least one platform." });
+    if ((publishNow || requestedStatus === "scheduled") && platforms.includes("tiktok") && !String(req.body.tiktokPublishId || req.body.mediaType || "").trim()) return res.status(400).json({ message: "TikTok requires media. Add a photo or video before publishing or scheduling." });
+    if (requestedStatus === "scheduled" && platforms.includes("tiktok")) return res.status(400).json({ message: "TikTok scheduling is not available yet. Publish TikTok posts now instead." });
+    if (publishNow && platforms.includes("tiktok") && !String(req.body.tiktokPublishId || "").trim()) return res.status(400).json({ message: "TikTok media must be uploaded before publishing." });
     let scheduledFor = null;
     if (requestedStatus === "scheduled") {
       scheduledFor = new Date(req.body.scheduledFor);
       if (Number.isNaN(scheduledFor.getTime())) return res.status(400).json({ message: "Choose a valid date and time." });
       if (scheduledFor <= new Date()) return res.status(400).json({ message: "Scheduled time must be in the future." });
     }
+    const user = await findUserById(req.auth.id);
+    if (!user) return res.status(404).json({ message: "Account not found." });
+    for (const platform of platforms) {
+      if (platform === "linkedin" && !user.connections?.linkedin?.connected) return res.status(400).json({ message: "Connect LinkedIn before publishing or scheduling LinkedIn content." });
+      if (platform === "x" && !user.connections?.x?.connected) return res.status(400).json({ message: "Connect X before publishing or scheduling X content." });
+      if (platform === "tiktok" && !user.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing TikTok content." });
+    }
     const item = await Content.create({
-      userId: req.auth.id, title: title || "LinkedIn post", body, platforms,
-      status: publishNow && platforms.includes("linkedin") ? "draft" : requestedStatus, scheduledFor,
+      userId: req.auth.id, title: "", body, platforms,
+      status: requestedStatus, scheduledFor,
       mediaUrl: String(req.body.mediaUrl || "").trim(),
       mediaUrn: String(req.body.mediaUrn || "").trim(),
       mediaType: String(req.body.mediaType || "").trim(),
       mediaAltText: String(req.body.mediaAltText || "").trim()
     });
 
-    if (platforms.includes("linkedin")) {
-      const user = await findUserById(req.auth.id);
-      if (!user?.connections?.linkedin?.connected) {
-        await Content.deleteOne({ _id: item._id });
-        return res.status(400).json({ message: "Connect LinkedIn before publishing or scheduling LinkedIn content." });
-      }
-      if (item.mediaUrl && !item.mediaUrn) {
-        const media = await prepareLinkedInImage(user, item.mediaUrl);
-        item.mediaUrn = media.urn;
-        item.mediaType = "image";
-        await item.save();
-      }
-      if (publishNow) {
-        const externalPostUrn = await publishLinkedInContent(user, item);
-        item.externalPostUrn = externalPostUrn;
-        item.status = "published";
-        item.publishedAt = new Date();
-        item.scheduledFor = null;
-        await item.save();
-      }
+    if (publishNow) {
+      const externalPosts = {};
+      if (platforms.includes("linkedin")) externalPosts.linkedin = await publishLinkedInContent(user, item);
+      if (platforms.includes("x")) externalPosts.x = await publishXContent(user, item);
+      if (platforms.includes("tiktok")) externalPosts.tiktok = String(req.body.tiktokPublishId || "");
+      item.externalPosts = externalPosts;
+      item.externalPostUrn = externalPosts.linkedin || externalPosts.x || externalPosts.tiktok || "";
+      item.status = "published";
+      item.publishedAt = new Date();
+      item.scheduledFor = null;
+      await item.save();
     }
     res.status(201).json({ item });
   } catch (error) {
@@ -427,29 +464,42 @@ app.patch("/api/content/:id", auth, async (req, res) => {
     const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id });
     if (!item) return res.status(404).json({ message: "Content not found." });
     const body = String(req.body.body ?? item.body).trim();
-    const title = String(req.body.title ?? item.title).trim();
-    if (!body && !title) return res.status(400).json({ message: "Add a title or caption." });
+    const title = "";
+    if (!body) return res.status(400).json({ message: "Write something for your post." });
 
-    if (item.platforms.includes("linkedin") && item.externalPostUrn) {
-      const user = await findUserById(req.auth.id);
-      const conn = user?.connections?.linkedin;
-      if (!conn?.connected || !conn.accessTokenEncrypted) return res.status(400).json({ message: "Reconnect LinkedIn before editing this post." });
-      const token = decryptToken(conn.accessTokenEncrypted);
-      await linkedinFetch(`https://api.linkedin.com/rest/posts/${encodeURIComponent(item.externalPostUrn)}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-RestLi-Method": "PARTIAL_UPDATE" },
-        body: JSON.stringify({ patch: { $set: { commentary: body || title } } })
-      });
+    const user = await findUserById(req.auth.id);
+    if (item.status === "published" && item.platforms.includes("tiktok") && item.externalPosts?.tiktok) {
+      return res.status(400).json({ message: "TikTok posts cannot be edited from Creovah after publishing." });
+    }
+    if (item.status === "published" && item.platforms.includes("x") && item.externalPosts?.x) {
+      const ageMs = Date.now() - new Date(item.publishedAt || item.updatedAt || Date.now()).getTime();
+      if (ageMs > 30 * 60 * 1000) return res.status(400).json({ message: "X posts can only be edited within 30 minutes of publishing." });
+    }
+    if (item.status === "published") {
+      if (item.platforms.includes("linkedin") && (item.externalPosts?.linkedin || item.externalPostUrn) && user?.connections?.linkedin?.connected) {
+        const token = decryptToken(user.connections.linkedin.accessTokenEncrypted);
+        const liUrn = item.externalPosts?.linkedin || item.externalPostUrn;
+        await linkedinFetch(`https://api.linkedin.com/rest/posts/${encodeURIComponent(liUrn)}`, {
+          method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-RestLi-Method": "PARTIAL_UPDATE" },
+          body: JSON.stringify({ patch: { $set: { commentary: body } } })
+        });
+      }
+      if (item.platforms.includes("x") && item.externalPosts?.x) {
+        const x = await getXAccessToken(user);
+        const result = await xApi("POST", "/2/tweets", x.token, { text: body, edit_options: { previous_post_id: item.externalPosts.x } });
+        if (result?.data?.id) item.externalPosts.x = result.data.id;
+      }
     }
 
+    if (item.status === "scheduled" && item.platforms.includes("tiktok") && !item.mediaUrn) return res.status(400).json({ message: "TikTok requires media. Add a photo or video before publishing or scheduling." });
     if (item.status === "scheduled" && Object.prototype.hasOwnProperty.call(req.body, "scheduledFor")) {
       const scheduledFor = new Date(req.body.scheduledFor);
       if (Number.isNaN(scheduledFor.getTime())) return res.status(400).json({ message: "Choose a valid date and time." });
       if (scheduledFor <= new Date()) return res.status(400).json({ message: "Scheduled time must be in the future." });
       item.scheduledFor = scheduledFor;
     }
-    item.title = title || "LinkedIn post"; item.body = body; await item.save();
-    res.json({ item });
+    item.title = ""; item.body = body; await item.save();
+    res.json({ item, message: item.status === "published" && item.platforms.includes("x") ? "Your changes were saved on X and Creovah." : "Your changes were saved." });
   } catch (error) { res.status(500).json({ message: error.message || "Unable to update this post right now." }); }
 });
 
@@ -457,15 +507,19 @@ app.delete("/api/content/:id", auth, async (req, res) => {
   try {
     const item = await Content.findOne({ _id: req.params.id, userId: req.auth.id });
     if (!item) return res.status(404).json({ message: "Content not found." });
-    if (item.platforms.includes("linkedin") && item.externalPostUrn) {
-      const user = await findUserById(req.auth.id);
-      const conn = user?.connections?.linkedin;
-      if (!conn?.connected || !conn.accessTokenEncrypted) return res.status(400).json({ message: "Reconnect LinkedIn before deleting this post." });
-      const token = decryptToken(conn.accessTokenEncrypted);
-      await linkedinFetch(`https://api.linkedin.com/rest/posts/${encodeURIComponent(item.externalPostUrn)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "X-RestLi-Method": "DELETE" } });
+    const user = await findUserById(req.auth.id);
+    const external = item.externalPosts || {};
+    const liUrn = external.linkedin || (item.platforms.includes("linkedin") ? item.externalPostUrn : "");
+    if (item.platforms.includes("linkedin") && liUrn && user?.connections?.linkedin?.connected) {
+      const token = decryptToken(user.connections.linkedin.accessTokenEncrypted);
+      await linkedinFetch(`https://api.linkedin.com/rest/posts/${encodeURIComponent(liUrn)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "X-RestLi-Method": "DELETE" } });
+    }
+    if (item.platforms.includes("x") && external.x && user?.connections?.x?.connected) {
+      const x = await getXAccessToken(user);
+      await xApi("DELETE", `/2/tweets/${encodeURIComponent(external.x)}`, x.token);
     }
     await Content.deleteOne({ _id: item._id });
-    res.json({ message: "Post deleted from Creovah and LinkedIn." });
+    res.json({ message: "Post deleted." });
   } catch (error) { res.status(500).json({ message: error.message || "Unable to delete this post right now." }); }
 });
 
@@ -633,7 +687,7 @@ async function publishLinkedInContent(user, item) {
   const token = decryptToken(conn.accessTokenEncrypted);
   const content = {
     author: conn.memberUrn,
-    commentary: item.body || item.title || "",
+    commentary: item.body || "",
     visibility: "PUBLIC",
     distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
     lifecycleState: "PUBLISHED",
@@ -650,31 +704,28 @@ async function publishLinkedInContent(user, item) {
   return response.headers.get("x-restli-id") || "";
 }
 
-// Publish due LinkedIn schedules. The job is intentionally small and idempotent:
-// each item is marked published only after LinkedIn returns success.
+// Publish due scheduled posts. Creovah owns the schedule and sends each post when it is due.
 let schedulerBusy = false;
-async function processLinkedInSchedules() {
+async function processSchedules() {
   if (schedulerBusy || mongoose.connection.readyState !== 1) return;
   schedulerBusy = true;
   try {
-    const due = await Content.find({ platforms: "linkedin", status: "scheduled", scheduledFor: { $lte: new Date() } }).limit(10);
+    const due = await Content.find({ status: "scheduled", scheduledFor: { $lte: new Date() }, platforms: { $in: ["linkedin", "x"] } }).limit(10);
     for (const item of due) {
       try {
-        const user = await findUserById(item.userId);
-        if (!user) throw new Error("Account not found.");
-        item.externalPostUrn = await publishLinkedInContent(user, item);
-        item.status = "published";
-        item.publishedAt = new Date();
-        await item.save();
-      } catch (error) {
-        console.error(`LinkedIn scheduled post ${item._id} failed:`, error.message);
-      }
+        const user = await findUserById(item.userId); if (!user) throw new Error("Account not found.");
+        const externalPosts = {};
+        if (item.platforms.includes("linkedin")) externalPosts.linkedin = await publishLinkedInContent(user, item);
+        if (item.platforms.includes("x")) externalPosts.x = await publishXContent(user, item);
+        item.externalPosts = externalPosts;
+        item.externalPostUrn = externalPosts.linkedin || externalPosts.x || "";
+        item.status = "published"; item.publishedAt = new Date(); item.scheduledFor = null; await item.save();
+      } catch (error) { console.error(`Scheduled post ${item._id} failed:`, error.message); }
     }
-  } catch (error) {
-    console.error("LinkedIn scheduler error:", error.message);
-  } finally { schedulerBusy = false; }
+  } catch (error) { console.error("Scheduler error:", error.message); }
+  finally { schedulerBusy = false; }
 }
-setInterval(processLinkedInSchedules, 60 * 1000);
+setInterval(processSchedules, 60 * 1000);
 
 
 app.get("/api/account/export", auth, async (req,res)=>{
@@ -741,6 +792,332 @@ app.post("/api/notifications/:id/read",auth,async(req,res)=>{await Notification.
 app.get("/api/legal",async(req,res)=>{const legal=await Legal.findOne({key:"site"}).lean();res.json({legal:legal||{terms:"",privacy:""}});});
 app.post("/api/admin/legal",auth,adminOnly,async(req,res)=>{const legal=await Legal.findOneAndUpdate({key:"site"},{key:"site",terms:String(req.body.terms||""),privacy:String(req.body.privacy||""),updatedAt:new Date()},{upsert:true,new:true});res.json({legal});});
 
+// --- X OAuth 2.0 PKCE + publishing ---
+const X_CLIENT_ID = process.env.X_CLIENT_ID;
+const X_CLIENT_SECRET = process.env.X_CLIENT_SECRET || "";
+const X_REDIRECT_URI = process.env.X_REDIRECT_URI || `${APP_BASE_URL}/api/connections/x/callback`;
+const X_SCOPES = "tweet.read tweet.write users.read media.write offline.access";
+
+async function xApi(method, pathName, token, body) {
+  const response = await fetch(`https://api.x.com${pathName}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+  });
+  const text = await response.text(); let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+  if (!response.ok) {
+    const err = data?.detail || data?.title || data?.errors?.[0]?.detail || data?.errors?.[0]?.message || data?.error || data?.raw || `X request failed (${response.status}).`;
+    throw new Error(String(err));
+  }
+  return data;
+}
+function base64url(buffer) { return Buffer.from(buffer).toString("base64").replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""); }
+function createPkcePair() {
+  const verifier = base64url(crypto.randomBytes(32));
+  const challenge = base64url(crypto.createHash("sha256").update(verifier).digest());
+  return { verifier, challenge };
+}
+
+app.get("/api/connections/x/start", auth, (req, res) => {
+  try {
+    if (!X_CLIENT_ID) return res.status(500).json({ message: "X connection is not configured on the server yet." });
+    const { verifier, challenge } = createPkcePair();
+    const state = createOAuthState(req.auth.id, "x", { codeVerifier: verifier });
+    const params = new URLSearchParams({ response_type: "code", client_id: X_CLIENT_ID, redirect_uri: X_REDIRECT_URI, scope: X_SCOPES, state, code_challenge: challenge, code_challenge_method: "S256" });
+    res.json({ url: `https://x.com/i/oauth2/authorize?${params.toString()}` });
+  } catch (error) { console.error("X OAuth start error:", error); res.status(500).json({ message: "Unable to start the X connection." }); }
+});
+
+async function exchangeXCode(code, verifier) {
+  const body = new URLSearchParams({ code: String(code), grant_type: "authorization_code", client_id: X_CLIENT_ID, redirect_uri: X_REDIRECT_URI, code_verifier: verifier });
+  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  if (X_CLIENT_SECRET) headers.Authorization = `Basic ${Buffer.from(`${X_CLIENT_ID}:${X_CLIENT_SECRET}`).toString("base64")}`;
+  const response = await fetch("https://api.x.com/2/oauth2/token", { method: "POST", headers, body });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.detail || data.error || "X token exchange failed.");
+  return data;
+}
+
+async function completeXConnection(userId, code, verifier) {
+  const user = await findUserById(userId); if (!user) throw new Error("Account not found.");
+  const token = await exchangeXCode(code, verifier);
+  const me = await xApi("GET", "/2/users/me", token.access_token);
+  const profile = me.data || {};
+  user.connections = user.connections || {};
+  user.connections.x = {
+    connected: true, userId: profile.id || "", username: profile.username || "", name: profile.name || "",
+    accessTokenEncrypted: encryptToken(token.access_token),
+    refreshTokenEncrypted: token.refresh_token ? encryptToken(token.refresh_token) : "",
+    tokenExpiresAt: token.expires_in ? new Date(Date.now() + Number(token.expires_in) * 1000) : null,
+    refreshTokenExpiresAt: null
+  };
+  user.socials = { ...user.socials, x: true };
+  await saveUser(user);
+  return { name: profile.name || profile.username || "X" };
+}
+
+app.get("/api/connections/x/callback", async (req, res) => {
+  const redirectToDashboard = (status, reason, message) => {
+    const params = new URLSearchParams({ connect: status }); if (reason) params.set("reason", reason); if (message) params.set("message", String(message).slice(0, 500));
+    return res.redirect(`/dashboard.html?${params.toString()}`);
+  };
+  try {
+    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+    const pending = state ? consumeOAuthState(String(state)) : null;
+    if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
+    if (!code || !pending || pending.platform !== "x" || !pending.codeVerifier) return redirectToDashboard("error", "session-expired", "The X connection session expired. Please try again.");
+    const result = await completeXConnection(pending.userId, String(code), pending.codeVerifier);
+    return redirectToDashboard("x-success", null, `${result.name} connected.`);
+  } catch (error) { console.error("X OAuth callback error:", error.message); return redirectToDashboard("error", "unexpected", error.message || "X returned an unexpected error while connecting your account."); }
+});
+
+async function getXAccessToken(user) {
+  const conn = user?.connections?.x;
+  if (!conn?.connected || !conn.accessTokenEncrypted) throw new Error("Connect X before publishing.");
+  if (conn.tokenExpiresAt && new Date(conn.tokenExpiresAt).getTime() > Date.now() + 60 * 1000) return { token: decryptToken(conn.accessTokenEncrypted) };
+  if (!conn.refreshTokenEncrypted) return { token: decryptToken(conn.accessTokenEncrypted) };
+  const refreshToken = decryptToken(conn.refreshTokenEncrypted);
+  const body = new URLSearchParams({ refresh_token: refreshToken, grant_type: "refresh_token", client_id: X_CLIENT_ID });
+  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  if (X_CLIENT_SECRET) headers.Authorization = `Basic ${Buffer.from(`${X_CLIENT_ID}:${X_CLIENT_SECRET}`).toString("base64")}`;
+  const response = await fetch("https://api.x.com/2/oauth2/token", { method: "POST", headers, body });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || "X session expired. Please reconnect X.");
+  conn.accessTokenEncrypted = encryptToken(data.access_token);
+  if (data.refresh_token) conn.refreshTokenEncrypted = encryptToken(data.refresh_token);
+  conn.tokenExpiresAt = data.expires_in ? new Date(Date.now() + Number(data.expires_in) * 1000) : null;
+  await saveUser(user);
+  return { token: data.access_token };
+}
+
+async function uploadXMedia(user, file) {
+  const { token } = await getXAccessToken(user);
+  const mime = String(file.mimetype || "").toLowerCase();
+  if (!["image/jpeg","image/png","image/gif","image/webp","video/mp4","video/quicktime","video/webm"].includes(mime)) throw new Error("X supports JPG, PNG, GIF, WEBP and MP4 media here.");
+  if (mime.startsWith("image/")) {
+    if (file.size > 5 * 1024 * 1024) throw new Error("X images must be 5 MB or smaller.");
+    const result = await xApi("POST", "/2/media/upload", token, { media: file.buffer.toString("base64"), media_category: mime === "image/gif" ? "tweet_gif" : "tweet_image", media_type: mime });
+    return { id: result?.data?.id, type: "image" };
+  }
+  if (file.size > 512 * 1024 * 1024) throw new Error("X videos must be 512 MB or smaller.");
+  const initResp = await fetch("https://api.x.com/2/media/upload/initialize", { method:"POST", headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"}, body:JSON.stringify({media_category:"tweet_video",media_type:mime,total_bytes:file.size}) });
+  const init = await initResp.json().catch(()=>({})); if(!initResp.ok || !init.data?.id) throw new Error(init.detail || init.errors?.[0]?.detail || "X video upload could not be initialized.");
+  const id=init.data.id; const chunkSize=5*1024*1024;
+  for(let offset=0,segment=0; offset<file.size; offset+=chunkSize,segment++){
+    const chunk=file.buffer.subarray(offset,Math.min(offset+chunkSize,file.size));
+    const form=new FormData(); form.append("media",new Blob([chunk]),"chunk.bin"); form.append("segment_index",String(segment));
+    const r=await fetch(`https://api.x.com/2/media/upload/${encodeURIComponent(id)}/append`,{method:"POST",headers:{Authorization:`Bearer ${token}`},body:form});
+    if(!r.ok) throw new Error(`X video upload failed (${r.status}).`);
+  }
+  const fin=await fetch(`https://api.x.com/2/media/upload/${encodeURIComponent(id)}/finalize`,{method:"POST",headers:{Authorization:`Bearer ${token}`}}); const finalized=await fin.json().catch(()=>({})); if(!fin.ok) throw new Error(finalized.detail || finalized.errors?.[0]?.detail || "X video upload could not be finalized.");
+  let info=finalized.data?.processing_info;
+  while(info && ["pending","in_progress"].includes(String(info.state).toLowerCase())){
+    await new Promise(r=>setTimeout(r,Math.max(1000,Number(info.check_after_secs||2)*1000)));
+    const st=await fetch(`https://api.x.com/2/media/upload?media_id=${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${token}`}}); const sd=await st.json().catch(()=>({})); if(!st.ok) throw new Error(sd.detail || sd.errors?.[0]?.detail || "X video processing status failed."); info=sd.data?.processing_info;
+  }
+  if(info && String(info.state).toLowerCase()!=="succeeded") throw new Error("X could not finish processing the video.");
+  return {id,type:"video"};
+}
+
+app.post("/api/x/media", auth, mediaUpload.single("media"), async (req,res)=>{
+  try { if(!req.file)return res.status(400).json({message:"Choose a photo or video."}); const user=await findUserById(req.auth.id); const media=await uploadXMedia(user,req.file); res.json({urn:media.id,mediaType:media.type}); }
+  catch(error){ console.error("X media upload error:",error); res.status(500).json({message:error.message||"Unable to upload media to X."}); }
+});
+
+async function publishXContent(user,item) {
+  const { token } = await getXAccessToken(user);
+  const payload = { text: item.body || "" };
+  if (item.mediaUrn) payload.media = { media_ids: [String(item.mediaUrn)] };
+  const result = await xApi("POST", "/2/tweets", token, payload);
+  return result?.data?.id || "";
+}
+
+// --- TikTok Login Kit + Content Posting API ---
+const TIKTOK_CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
+const TIKTOK_CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
+const TIKTOK_REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI || `${APP_BASE_URL}/api/connections/tiktok/callback`;
+const TIKTOK_SCOPES = "user.info.basic,video.publish";
+
+async function tiktokJsonFetch(url, options = {}) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+  if (!response.ok) {
+    const detail = data.error_description || data.error?.message || data.error?.code || data.message || data.raw || `TikTok request failed (${response.status}).`;
+    throw new Error(String(detail));
+  }
+  if (data.error && data.error.code && data.error.code !== "ok") throw new Error(data.error.message || data.error.code);
+  return data;
+}
+
+app.get("/api/connections/tiktok/start", auth, (req, res) => {
+  try {
+    if (!TIKTOK_CLIENT_KEY || !TIKTOK_CLIENT_SECRET) return res.status(500).json({ message: "TikTok connection is not configured on the server yet." });
+    const state = createOAuthState(req.auth.id, "tiktok");
+    const params = new URLSearchParams({
+      client_key: TIKTOK_CLIENT_KEY,
+      response_type: "code",
+      scope: TIKTOK_SCOPES,
+      redirect_uri: TIKTOK_REDIRECT_URI,
+      state
+    });
+    res.json({ url: `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}` });
+  } catch (error) {
+    console.error("TikTok OAuth start error:", error);
+    res.status(500).json({ message: "Unable to start the TikTok connection." });
+  }
+});
+
+async function exchangeTikTokCode(code) {
+  const body = new URLSearchParams({
+    client_key: TIKTOK_CLIENT_KEY,
+    client_secret: TIKTOK_CLIENT_SECRET,
+    code: String(code),
+    grant_type: "authorization_code",
+    redirect_uri: TIKTOK_REDIRECT_URI
+  });
+  const data = await tiktokJsonFetch("https://open.tiktokapis.com/v2/oauth/token/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache" },
+    body
+  });
+  if (!data.access_token) throw new Error("TikTok did not return an access token.");
+  return data;
+}
+
+async function completeTikTokConnection(userId, code) {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("Account not found.");
+  const token = await exchangeTikTokCode(code);
+  const profile = await tiktokJsonFetch("https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name", {
+    headers: { Authorization: `Bearer ${token.access_token}` }
+  });
+  const profileUser = profile.data?.user || {};
+  user.connections = user.connections || {};
+  user.connections.tiktok = {
+    connected: true,
+    openId: token.open_id || profileUser.open_id || "",
+    username: "",
+    name: profileUser.display_name || "TikTok account",
+    accessTokenEncrypted: encryptToken(token.access_token),
+    refreshTokenEncrypted: token.refresh_token ? encryptToken(token.refresh_token) : "",
+    tokenExpiresAt: token.expires_in ? new Date(Date.now() + Number(token.expires_in) * 1000) : null,
+    refreshTokenExpiresAt: token.refresh_expires_in ? new Date(Date.now() + Number(token.refresh_expires_in) * 1000) : null
+  };
+  user.socials = { ...user.socials, tiktok: true };
+  await saveUser(user);
+  return { name: user.connections.tiktok.name };
+}
+
+async function getTikTokAccessToken(user) {
+  const conn = user?.connections?.tiktok;
+  if (!conn?.connected || !conn.accessTokenEncrypted) throw new Error("Connect TikTok before publishing.");
+  if (conn.tokenExpiresAt && new Date(conn.tokenExpiresAt).getTime() > Date.now() + 60 * 1000) return { token: decryptToken(conn.accessTokenEncrypted) };
+  if (!conn.refreshTokenEncrypted) return { token: decryptToken(conn.accessTokenEncrypted) };
+  const body = new URLSearchParams({
+    client_key: TIKTOK_CLIENT_KEY,
+    client_secret: TIKTOK_CLIENT_SECRET,
+    grant_type: "refresh_token",
+    refresh_token: decryptToken(conn.refreshTokenEncrypted)
+  });
+  const data = await tiktokJsonFetch("https://open.tiktokapis.com/v2/oauth/token/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache" },
+    body
+  });
+  conn.accessTokenEncrypted = encryptToken(data.access_token);
+  if (data.refresh_token) conn.refreshTokenEncrypted = encryptToken(data.refresh_token);
+  conn.tokenExpiresAt = data.expires_in ? new Date(Date.now() + Number(data.expires_in) * 1000) : null;
+  conn.refreshTokenExpiresAt = data.refresh_expires_in ? new Date(Date.now() + Number(data.refresh_expires_in) * 1000) : conn.refreshTokenExpiresAt;
+  await saveUser(user);
+  return { token: data.access_token };
+}
+
+async function queryTikTokCreator(token) {
+  return tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/creator_info/query/", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=UTF-8" },
+    body: JSON.stringify({})
+  });
+}
+
+async function publishTikTokVideo(user, item, file) {
+  if (!file) throw new Error("TikTok requires a video. Add a video before publishing.");
+  const mime = String(file.mimetype || "").toLowerCase();
+  if (!["video/mp4", "video/quicktime", "video/webm"].includes(mime)) throw new Error("TikTok publishing currently requires an MP4, MOV or WEBM video.");
+  if (file.size > 4 * 1024 * 1024 * 1024) throw new Error("TikTok videos must be 4 GB or smaller.");
+  const { token } = await getTikTokAccessToken(user);
+  const creator = await queryTikTokCreator(token);
+  const info = creator.data || {};
+  const privacyOptions = Array.isArray(info.privacy_level_options) ? info.privacy_level_options : [];
+  const privacy = privacyOptions.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : privacyOptions[0];
+  if (!privacy) throw new Error("TikTok did not return an available privacy setting.");
+  const chunkSize = Math.min(64 * 1024 * 1024, Math.max(5 * 1024 * 1024, 10 * 1024 * 1024));
+  const totalChunks = Math.ceil(file.size / chunkSize);
+  const init = await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=UTF-8" },
+    body: JSON.stringify({
+      post_info: { title: (item.body || "").slice(0, 2200), privacy_level: privacy, disable_duet: false, disable_comment: false, disable_stitch: false },
+      source_info: { source: "FILE_UPLOAD", video_size: file.size, chunk_size: chunkSize, total_chunk_count: totalChunks }
+    })
+  });
+  const uploadUrl = init.data?.upload_url;
+  const publishId = init.data?.publish_id;
+  if (!uploadUrl || !publishId) throw new Error("TikTok did not return an upload URL.");
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const end = Math.min(offset + chunkSize, file.size) - 1;
+    const chunk = file.buffer.subarray(offset, end + 1);
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": mime, "Content-Length": String(chunk.length), "Content-Range": `bytes ${offset}-${end}/${file.size}` },
+      body: chunk
+    });
+    if (!uploadResponse.ok) {
+      const detail = await uploadResponse.text().catch(() => "");
+      throw new Error(`TikTok video upload failed (${uploadResponse.status}).${detail ? ` ${detail.slice(0, 200)}` : ""}`);
+    }
+  }
+  return publishId;
+}
+
+app.post("/api/tiktok/publish", auth, mediaUpload.single("media"), async (req, res) => {
+  try {
+    const user = await findUserById(req.auth.id);
+    if (!user?.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing." });
+    if (!req.file) return res.status(400).json({ message: "TikTok requires media. Add a video before publishing." });
+    const body = String(req.body.body || "").trim();
+    if (!body) return res.status(400).json({ message: "Write something for your TikTok post." });
+    const publishId = await publishTikTokVideo(user, { body }, req.file);
+    res.json({ publishId, mediaType: "video" });
+  } catch (error) {
+    console.error("TikTok publish error:", error);
+    res.status(500).json({ message: error.message || "Unable to publish to TikTok." });
+  }
+});
+
+app.get("/api/connections/tiktok/callback", async (req, res) => {
+  const redirectToDashboard = (status, reason, message) => {
+    const params = new URLSearchParams({ connect: status });
+    if (reason) params.set("reason", reason);
+    if (message) params.set("message", String(message).slice(0, 500));
+    return res.redirect(`/dashboard.html?${params.toString()}`);
+  };
+  try {
+    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+    const pending = state ? consumeOAuthState(String(state)) : null;
+    if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
+    if (!code || !pending || pending.platform !== "tiktok") return redirectToDashboard("error", "session-expired");
+    const result = await completeTikTokConnection(pending.userId, String(code));
+    return redirectToDashboard("tiktok-success", null, result.name ? `${result.name} connected.` : "TikTok connected successfully.");
+  } catch (error) {
+    console.error("TikTok OAuth callback error:", error.message);
+    return redirectToDashboard("error", "unexpected", error.message || "TikTok returned an unexpected error while connecting your account.");
+  }
+});
+
 // --- Facebook / Instagram OAuth connect flows ---
 // Facebook and Instagram are intentionally separate connections. For the current
 // rollout, Facebook is the only Meta connection being configured. Instagram stays
@@ -755,11 +1132,12 @@ const FB_GRAPH_VERSION = "v21.0";
 // Short-lived, in-memory map of OAuth state -> user/platform. State expires in
 // 10 minutes and is consumed once, preventing a callback from being replayed.
 const pendingOAuthStates = new Map();
-function createOAuthState(userId, platform) {
+function createOAuthState(userId, platform, extra = {}) {
   const state = crypto.randomBytes(16).toString("hex");
   pendingOAuthStates.set(state, {
     userId: String(userId),
     platform,
+    ...extra,
     expiresAt: Date.now() + 10 * 60 * 1000
   });
   return state;
@@ -946,7 +1324,7 @@ app.get("/api/connections/facebook/callback", async (req, res) => {
 app.post("/api/connections/:platform/disconnect", auth, async (req, res) => {
   try {
     const platform = req.params.platform;
-    if (!["instagram", "facebook", "linkedin"].includes(platform)) return res.status(400).json({ message: "Unknown platform." });
+    if (!["instagram", "facebook", "linkedin", "x", "tiktok"].includes(platform)) return res.status(400).json({ message: "Unknown platform." });
     const user = await findUserById(req.auth.id);
     if (!user) return res.status(404).json({ message: "Account not found." });
 
@@ -969,7 +1347,8 @@ app.post("/api/account/request-deletion", auth, async (req, res) => {
     // keep that once deletion has been requested, even before full purge.
     user.connections = {
       instagram: { connected: false },
-      facebook: { connected: false }
+      facebook: { connected: false },
+      tiktok: { connected: false }
     };
     user.socials = { instagram: false, facebook: false, tiktok: false };
     user.deletionRequested = true;
