@@ -408,8 +408,12 @@ function validateContentForPlatforms({ platforms, body, mediaAssets, action }) {
   return errors;
 }
 function validateMediaAssetsOwnership(assets, userId) {
-  const prefix = `/creovah/${String(userId)}/`;
-  return (Array.isArray(assets) ? assets : []).every(asset => String(asset?.publicId || "").includes(prefix) && /^https:\/\//i.test(String(asset?.secureUrl || "")));
+  const prefix = `creovah/${String(userId)}/`;
+  return (Array.isArray(assets) ? assets : []).every(asset => {
+    const publicId = String(asset?.publicId || "");
+    const secureUrl = String(asset?.secureUrl || "");
+    return publicId.startsWith(prefix) && /^https:\/\//i.test(secureUrl);
+  });
 }
 function validationMessage(errors) {
   return errors.map(e => `${PLATFORM_RULES[e.platform]?.name || e.platform}: ${e.message}`).join("\n");

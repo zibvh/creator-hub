@@ -11,9 +11,9 @@ function localSchedule(){
   const d=new Date(`${date}T${time}`);
   return Number.isNaN(d.getTime())?null:d.toISOString();
 }
+function clearInlineError(){ const el=$('formError'); if(el){el.textContent='';el.style.display='none';} }
 function showError(title,msg){
-  $('formError').style.display='block';
-  $('formError').textContent=msg;
+  clearInlineError();
   notice(title,msg,'failure');
 }
 
@@ -41,7 +41,7 @@ async function deleteContent(id){
   try{const r=await fetch('/api/content/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+t}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'The post could not be deleted.');items=items.filter(x=>x._id!==id);renderContent();updateStats();notice('Post deleted',d.message||'The post was removed.','success')}catch(e){notice('Delete failed',e.message,'failure')}
 }
 function populateModal(item,mode){
-  composerMode=mode;editingId=item?._id||null;originalAltText=item?.mediaAltText||'';resetMedia(false);$('body').value=item?.body||'';$('altText').value=item?.mediaAltText||'';$('count').textContent=$('body').value.length;$('formError').textContent='';
+  composerMode=mode;editingId=item?._id||null;originalAltText=item?.mediaAltText||'';resetMedia(false);clearInlineError();$('body').value=item?.body||'';$('altText').value=item?.mediaAltText||'';$('count').textContent=$('body').value.length;
   document.querySelectorAll('#platformChoices .platform').forEach(x=>x.classList.toggle('on',(item?.platforms||[]).includes(x.dataset.platform)));
   if(!item){const list=connectedPlatforms();if(list.length)document.querySelector(`#platformChoices .platform[data-platform="${list[0]}"]`)?.classList.add('on')}
   const now=new Date(Date.now()+60000);$('scheduleDate').min=new Date().toISOString().slice(0,10);$('scheduleDate').value=item?.scheduledFor?new Date(item.scheduledFor).toISOString().slice(0,10):now.toISOString().slice(0,10);$('scheduleTime').value=item?.scheduledFor?new Date(item.scheduledFor).toTimeString().slice(0,5):now.toTimeString().slice(0,5);
@@ -114,16 +114,15 @@ function clientValidate(platforms,action){
   return errors;
 }
 function showValidation(errors){
-  if(!errors.length){$('formError').textContent='';return false}
+  if(!errors.length){clearInlineError();return false}
   const text=errors.map(e=>`${e.platform==='x'?'X':e.platform[0].toUpperCase()+e.platform.slice(1)}: ${e.message}`).join('\n');
-  $('formError').style.display='block';
-  $('formError').textContent=text;
+  clearInlineError();
   notice('Fix these issues',text,'failure');
   return true;
 }
 async function submitContent(action){
   if(actionBusy)return;
-  $('formError').style.display='block';$('formError').textContent=''; const platforms=selectedPlatforms();
+  clearInlineError(); const platforms=selectedPlatforms();
   if(!platforms.length && (action==='publish'||action==='schedule')){showError('Platform required','Choose at least one connected platform.');return}
   if(action==='schedule'&&platforms.includes('tiktok')){if(showValidation([{platform:'tiktok',message:'TikTok scheduling is not available yet. Publish TikTok posts now instead.'}]))return}
   if((action==='publish'||action==='schedule')&&platforms.some(p=>!user.connections?.[p]?.connected)){const missing=platforms.filter(p=>!user.connections?.[p]?.connected).map(p=>({platform:p,message:`Connect ${p==='x'?'X':p[0].toUpperCase()+p.slice(1)} before publishing or scheduling.`}));if(showValidation(missing))return}
