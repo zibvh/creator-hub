@@ -17,7 +17,7 @@ const APP_BASE_URL = process.env.APP_BASE_URL || "https://creovah.onrender.com";
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
-const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024, files: 35 } });
 
 if (!process.env.MONGODB_URI) {
   console.error("MONGODB_URI is not set. This server requires MongoDB.");
@@ -1047,6 +1047,61 @@ async function queryTikTokCreator(token) {
   });
 }
 
+async function publishTikTokPhoto(user, item, files) {
+  if (!Array.isArray(files) || !files.length) throw new Error("TikTok requires at least one photo.");
+  if (files.length > 35) throw new Error("TikTok photo posts support up to 35 images.");
+  const allowed = new Set(["image/jpeg", "image/webp"]);
+  for (const file of files) {
+    const mime = String(file.mimetype || "").toLowerCase();
+    if (!allowed.has(mime)) throw new Error("TikTok photo posts use JPEG or WEBP images. PNG and GIF images are converted before sending.");
+    if (file.size > 20 * 1024 * 1024) throw new Error("Each TikTok image must be 20 MB or smaller.");
+  }
+  const { token } = await getTikTokAccessToken(user);
+  const creator = await queryTikTokCreator(token);
+  const info = creator.data || {};
+  const privacyOptions = Array.isArray(info.privacy_level_options) ? info.privacy_level_options : [];
+  const privacy = privacyOptions.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : privacyOptions[0];
+  if (!privacy) throw new Error("TikTok did not return an available privacy setting.");
+
+  const uploadDir = path.join(publicDir, "uploads", "tiktok");
+  require("fs").mkdirSync(uploadDir, { recursive: true });
+  const urls = [];
+  const savedPaths = [];
+  try {
+    for (const file of files) {
+      const ext = String(file.mimetype).toLowerCase() === "image/webp" ? "webp" : "jpg";
+      const name = `${crypto.randomUUID()}.${ext}`;
+      const fullPath = path.join(uploadDir, name);
+      require("fs").writeFileSync(fullPath, file.buffer);
+      savedPaths.push(fullPath);
+      urls.push(`${APP_BASE_URL}/uploads/tiktok/${name}`);
+    }
+
+    const init = await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({
+        post_info: {
+          title: (item.body || "").slice(0, 90),
+          description: (item.body || "").slice(0, 4000),
+          privacy_level: privacy,
+          disable_comment: false
+        },
+        source_info: { source: "PULL_FROM_URL", photo_cover_index: 0, photo_images: urls },
+        post_mode: "DIRECT_POST",
+        media_type: "PHOTO"
+      })
+    });
+    const publishId = init.data?.publish_id;
+    if (!publishId) throw new Error("TikTok did not return a photo publish ID.");
+    return publishId;
+  } finally {
+    for (const filePath of savedPaths) {
+      setTimeout(() => { try { require("fs").unlinkSync(filePath); } catch {} }, 2 * 60 * 60 * 1000);
+    }
+  }
+}
+
 async function publishTikTokVideo(user, item, file) {
   if (!file) throw new Error("TikTok requires a video. Add a video before publishing.");
   const mime = String(file.mimetype || "").toLowerCase();
@@ -1087,15 +1142,20 @@ async function publishTikTokVideo(user, item, file) {
   return publishId;
 }
 
-app.post("/api/tiktok/publish", auth, mediaUpload.single("media"), async (req, res) => {
+app.post("/api/tiktok/publish", auth, mediaUpload.array("media", 35), async (req, res) => {
   try {
     const user = await findUserById(req.auth.id);
     if (!user?.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing." });
-    if (!req.file) return res.status(400).json({ message: "TikTok requires media. Add a video before publishing." });
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (!files.length) return res.status(400).json({ message: "TikTok requires at least one photo or video." });
     const body = String(req.body.body || "").trim();
     if (!body) return res.status(400).json({ message: "Write something for your TikTok post." });
-    const publishId = await publishTikTokVideo(user, { body }, req.file);
-    res.json({ publishId, mediaType: "video" });
+    const hasVideo = files.some(f => String(f.mimetype || "").toLowerCase().startsWith("video/"));
+    const hasImage = files.some(f => String(f.mimetype || "").toLowerCase().startsWith("image/"));
+    if (hasVideo && hasImage) return res.status(400).json({ message: "Use either photos or a video for a TikTok post, not both." });
+    if (hasVideo && files.length !== 1) return res.status(400).json({ message: "TikTok video posts use one video at a time." });
+    const publishId = hasVideo ? await publishTikTokVideo(user, { body }, files[0]) : await publishTikTokPhoto(user, { body }, files);
+    res.json({ publishId, mediaType: hasVideo ? "video" : "image", mediaCount: files.length });
   } catch (error) {
     console.error("TikTok publish error:", error);
     res.status(500).json({ message: error.message || "Unable to publish to TikTok." });
