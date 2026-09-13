@@ -442,6 +442,12 @@ app.patch("/api/content/:id", auth, async (req, res) => {
       });
     }
 
+    if (item.status === "scheduled" && Object.prototype.hasOwnProperty.call(req.body, "scheduledFor")) {
+      const scheduledFor = new Date(req.body.scheduledFor);
+      if (Number.isNaN(scheduledFor.getTime())) return res.status(400).json({ message: "Choose a valid date and time." });
+      if (scheduledFor <= new Date()) return res.status(400).json({ message: "Scheduled time must be in the future." });
+      item.scheduledFor = scheduledFor;
+    }
     item.title = title || "LinkedIn post"; item.body = body; await item.save();
     res.json({ item });
   } catch (error) { res.status(500).json({ message: error.message || "Unable to update this post right now." }); }
