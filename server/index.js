@@ -126,6 +126,9 @@ const contentSchema = new mongoose.Schema({
   mediaType: { type: String, default: "" },
   mediaAltText: { type: String, default: "", maxlength: 300 },
   mediaAssets: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  // TikTok-only posting settings (privacy level, comments/duet/stitch, branded/AI content disclosure).
+  // Not applicable to and never used by any other platform.
+  tiktokSettings: { type: mongoose.Schema.Types.Mixed, default: undefined },
   externalPostUrn: { type: String, default: "" },
   publishErrors: { type: [mongoose.Schema.Types.Mixed], default: [] },
   externalPosts: {
@@ -387,7 +390,7 @@ const PLATFORM_RULES = {
   facebook: { name: "Facebook", maxText: 63206, maxImages: 10, maxVideos: 1, mediaRequired: false },
   tiktok: { name: "TikTok", maxText: 4000, maxImages: 35, maxVideos: 1, mediaRequired: true }
 };
-function validateContentForPlatforms({ platforms, body, mediaAssets, action }) {
+function validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings }) {
   const errors = [];
   const text = String(body || "");
   const assets = Array.isArray(mediaAssets) ? mediaAssets : [];
@@ -403,6 +406,11 @@ function validateContentForPlatforms({ platforms, body, mediaAssets, action }) {
     if (platform === "tiktok" && videos.length && action === "schedule") errors.push({ platform, message: "TikTok scheduling is not available yet. Publish TikTok posts now instead." });
     if (platform === "tiktok" && images.some(a => Number(a?.bytes || 0) > 20 * 1024 * 1024)) errors.push({ platform, message: "Each TikTok photo must be 20 MB or smaller." });
     if (platform === "tiktok" && videos.some(a => Number(a?.bytes || 0) > 4 * 1024 * 1024 * 1024)) errors.push({ platform, message: "TikTok videos must be 4 GB or smaller." });
+    if (platform === "tiktok" && action === "publish") {
+      const ts = tiktokSettings || {};
+      if (!ts.privacyLevel) errors.push({ platform, message: "Choose who can view this TikTok post before publishing." });
+      if (ts.isBrandedContent && ts.privacyLevel === "SELF_ONLY") errors.push({ platform, message: "Branded content cannot be set to private on TikTok. Choose a different privacy setting or turn off branded content." });
+    }
     if ((platform === "instagram" || platform === "facebook") && (action === "publish" || action === "schedule")) errors.push({ platform, message: `${rule.name} publishing is not connected to Creovah yet.` });
   }
   return errors;
@@ -502,6 +510,17 @@ app.post("/api/content", auth, async (req, res) => {
     if (!validateMediaAssetsOwnership(mediaAssets, req.auth.id)) return res.status(400).json({ message: "One or more media files are not valid Creovah media." });
     if (!body) return res.status(400).json({ message: "Write something for your post." });
     if (!platforms.length) return res.status(400).json({ message: "Choose at least one platform." });
+    // TikTok-only posting settings (privacy, comments/duet/stitch, branded/AI content disclosure).
+    // Ignored for every other platform; only ever applied when tiktok is a selected platform.
+    const rawTiktokSettings = req.body.tiktokSettings && typeof req.body.tiktokSettings === "object" ? req.body.tiktokSettings : {};
+    const tiktokSettings = platforms.includes("tiktok") ? {
+      privacyLevel: typeof rawTiktokSettings.privacyLevel === "string" ? rawTiktokSettings.privacyLevel : "",
+      disableComment: Boolean(rawTiktokSettings.disableComment),
+      disableDuet: Boolean(rawTiktokSettings.disableDuet),
+      disableStitch: Boolean(rawTiktokSettings.disableStitch),
+      isBrandedContent: Boolean(rawTiktokSettings.isBrandedContent),
+      isAigc: Boolean(rawTiktokSettings.isAigc)
+    } : undefined;
     let scheduledFor = null;
     if (requestedStatus === "scheduled") {
       scheduledFor = new Date(req.body.scheduledFor);
@@ -516,13 +535,13 @@ app.post("/api/content", auth, async (req, res) => {
       if (platform === "tiktok" && !user.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing or scheduling TikTok content." });
     }
     if (action !== "draft") {
-      const errors = validateContentForPlatforms({ platforms, body, mediaAssets, action });
+      const errors = validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings });
       if (errors.length) return res.status(422).json({ message: "Fix the platform requirements before continuing.", errors });
     }
     const item = await Content.create({
       userId: req.auth.id, title: "", body, platforms, status: requestedStatus, scheduledFor,
       mediaUrl: mediaAssets[0]?.secureUrl || "", mediaUrn: "", mediaType: mediaAssets[0]?.resourceType === "video" || String(mediaAssets[0]?.mimeType || "").startsWith("video/") ? "video" : mediaAssets.length ? "image" : "",
-      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets
+      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets, tiktokSettings
     });
     if (publishNow) {
       const externalPosts = {}; const publishErrors = [];
@@ -1199,25 +1218,50 @@ async function queryTikTokCreator(token) {
   });
 }
 
-async function publishTikTokPhoto(user, item, assets) {
+// Normalizes and validates the TikTok-only disclosure/privacy settings that come from the composer.
+// These are required by TikTok's Content Posting API review guidelines: creators must be able to
+// choose privacy level and interaction settings themselves, and content must be disclosed as
+// branded content and/or AI-generated content when applicable.
+function normalizeTikTokSettings(raw, allowedPrivacyOptions) {
+  const s = raw && typeof raw === "object" ? raw : {};
+  const options = Array.isArray(allowedPrivacyOptions) ? allowedPrivacyOptions : [];
+  let privacyLevel = typeof s.privacyLevel === "string" ? s.privacyLevel : "";
+  if (!options.includes(privacyLevel)) privacyLevel = options.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : options[0];
+  if (!privacyLevel) throw new Error("TikTok did not return an available privacy setting.");
+  const isBrandedContent = Boolean(s.isBrandedContent);
+  const isAigc = Boolean(s.isAigc);
+  // TikTok disallows branded content set to private.
+  if (isBrandedContent && privacyLevel === "SELF_ONLY") throw new Error("Branded content cannot be set to private on TikTok. Choose a different privacy setting or turn off branded content.");
+  return {
+    privacyLevel,
+    disableComment: Boolean(s.disableComment),
+    disableDuet: Boolean(s.disableDuet),
+    disableStitch: Boolean(s.disableStitch),
+    isBrandedContent,
+    isAigc
+  };
+}
+
+async function publishTikTokPhoto(user, item, assets, tiktokSettings) {
   if (!Array.isArray(assets) || !assets.length) throw new Error("TikTok requires at least one photo.");
   const { token } = await getTikTokAccessToken(user);
   const creator = await queryTikTokCreator(token); const info=creator.data||{};
-  const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[]; const privacy=options.includes("PUBLIC_TO_EVERYONE")?"PUBLIC_TO_EVERYONE":options[0];
-  if(!privacy)throw new Error("TikTok did not return an available privacy setting.");
+  const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[];
+  const settings = normalizeTikTokSettings(tiktokSettings, options);
   const urls=[];
   for(const asset of assets){if(!asset?.secureUrl)throw new Error("TikTok photo is missing its saved media URL."); if(Number(asset.bytes||0)>20*1024*1024)throw new Error("Each TikTok photo must be 20 MB or smaller."); urls.push(mediaProxyUrl(asset));}
-  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,90),description:(item.body||"").slice(0,4000),privacy_level:privacy,disable_comment:false,auto_add_music:false},source_info:{source:"PULL_FROM_URL",photo_cover_index:0,photo_images:urls},post_mode:"DIRECT_POST",media_type:"PHOTO"})});
+  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,90),description:(item.body||"").slice(0,4000),privacy_level:settings.privacyLevel,disable_comment:settings.disableComment,auto_add_music:false,brand_content_toggle:settings.isBrandedContent,is_aigc:settings.isAigc},source_info:{source:"PULL_FROM_URL",photo_cover_index:0,photo_images:urls},post_mode:"DIRECT_POST",media_type:"PHOTO"})});
   const id=init.data?.publish_id;if(!id)throw new Error("TikTok did not return a photo publish ID.");return id;
 }
-async function publishTikTokVideo(user,item,asset){
+async function publishTikTokVideo(user,item,asset,tiktokSettings){
   if(!asset)throw new Error("TikTok requires a video. Add a video before publishing.");
   const file=await fetchAssetBuffer(asset); const mime=file.mimeType;
   if(!["video/mp4","video/quicktime","video/webm"].includes(mime))throw new Error("TikTok video must be MP4, MOV or WEBM.");
   if(file.size>4*1024*1024*1024)throw new Error("TikTok videos must be 4 GB or smaller.");
-  const {token}=await getTikTokAccessToken(user); const creator=await queryTikTokCreator(token); const info=creator.data||{}; const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[]; const privacy=options.includes("PUBLIC_TO_EVERYONE")?"PUBLIC_TO_EVERYONE":options[0]; if(!privacy)throw new Error("TikTok did not return an available privacy setting.");
+  const {token}=await getTikTokAccessToken(user); const creator=await queryTikTokCreator(token); const info=creator.data||{}; const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[];
+  const settings = normalizeTikTokSettings(tiktokSettings, options);
   const chunkSize=10*1024*1024,totalChunks=Math.ceil(file.size/chunkSize);
-  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,2200),privacy_level:privacy,disable_duet:false,disable_comment:false,disable_stitch:false},source_info:{source:"FILE_UPLOAD",video_size:file.size,chunk_size:chunkSize,total_chunk_count:totalChunks}})});
+  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,2200),privacy_level:settings.privacyLevel,disable_duet:settings.disableDuet,disable_comment:settings.disableComment,disable_stitch:settings.disableStitch,brand_content_toggle:settings.isBrandedContent,is_aigc:settings.isAigc},source_info:{source:"FILE_UPLOAD",video_size:file.size,chunk_size:chunkSize,total_chunk_count:totalChunks}})});
   const uploadUrl=init.data?.upload_url,publishId=init.data?.publish_id;if(!uploadUrl||!publishId)throw new Error("TikTok did not return an upload URL.");
   for(let offset=0;offset<file.size;offset+=chunkSize){const end=Math.min(offset+chunkSize,file.size)-1;const chunk=file.buffer.subarray(offset,end+1);const r=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":mime,"Content-Length":String(chunk.length),"Content-Range":`bytes ${offset}-${end}/${file.size}`},body:chunk});if(!r.ok){const detail=await r.text().catch(()=>"");throw new Error(`TikTok video upload failed (${r.status}).${detail?` ${detail.slice(0,250)}`:""}`);}}
   return publishId;
@@ -1225,9 +1269,31 @@ async function publishTikTokVideo(user,item,asset){
 async function publishTikTokContent(user,item){
   const assets=Array.isArray(item.mediaAssets)?item.mediaAssets:[]; if(!assets.length)throw new Error("TikTok requires a photo or video.");
   const videos=assets.filter(a=>String(a?.mimeType||"").startsWith("video/")||a?.resourceType==="video");
-  if(videos.length)return publishTikTokVideo(user,item,videos[0]);
-  return publishTikTokPhoto(user,item,assets);
+  const tiktokSettings=item.tiktokSettings||{};
+  if(videos.length)return publishTikTokVideo(user,item,videos[0],tiktokSettings);
+  return publishTikTokPhoto(user,item,assets,tiktokSettings);
 }
+
+// Lets the composer populate privacy options and creator info for the TikTok-only settings panel.
+app.get("/api/connections/tiktok/creator-info", auth, async (req, res) => {
+  try {
+    const user = await findUserById(req.auth.id);
+    if (!user?.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before loading its posting settings." });
+    const { token } = await getTikTokAccessToken(user);
+    const creator = await queryTikTokCreator(token);
+    const info = creator.data || {};
+    res.json({
+      privacyOptions: Array.isArray(info.privacy_level_options) ? info.privacy_level_options : [],
+      commentDisabled: Boolean(info.comment_disabled),
+      duetDisabled: Boolean(info.duet_disabled),
+      stitchDisabled: Boolean(info.stitch_disabled),
+      maxVideoDurationSec: info.max_video_post_duration_sec || null
+    });
+  } catch (error) {
+    console.error("TikTok creator-info error:", error);
+    res.status(500).json({ message: error.message || "Unable to load TikTok posting settings." });
+  }
+});
 
 app.post("/api/tiktok/publish", auth, async (req,res)=>{
   return res.status(410).json({message:"TikTok publishing now uses Creovah's saved media flow. Save/upload the media through the composer and publish the post from there."});
