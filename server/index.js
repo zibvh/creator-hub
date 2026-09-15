@@ -142,12 +142,14 @@ const contentSchema = new mongoose.Schema({
   // TikTok-only posting settings (privacy level, comments/duet/stitch, branded/AI content disclosure).
   // Not applicable to and never used by any other platform.
   tiktokSettings: { type: mongoose.Schema.Types.Mixed, default: undefined },
+  platformSettings: { type: mongoose.Schema.Types.Mixed, default: undefined },
   externalPostUrn: { type: String, default: "" },
   publishErrors: { type: [mongoose.Schema.Types.Mixed], default: [] },
   externalPosts: {
     linkedin: { type: String, default: "" },
     x: { type: String, default: "" },
-    tiktok: { type: String, default: "" }
+    tiktok: { type: String, default: "" },
+    youtube: { type: String, default: "" }
   },
   platforms: { type: [String], default: [] },
   status: { type: String, enum: ["draft", "scheduled", "published"], default: "draft" },
@@ -419,13 +421,14 @@ function platformError(platform, message, platformCount) {
   return { platform, message: message + suffix };
 }
 
-function validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings, perPlatformOverrides }) {
+function validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings, perPlatformOverrides, platformSettings }) {
   const errors = [];
   const platformCount = platforms.length;
   for (const platform of platforms) {
     const rule = PLATFORM_RULES[platform]; if (!rule) continue;
     const override = perPlatformOverrides && perPlatformOverrides[platform];
-    const text = String((override && override.body !== undefined ? override.body : body) || "");
+    const rawText = String((override && override.body !== undefined ? override.body : body) || "");
+    const text = appendTagsToBody(rawText, platformSettings?.[platform]);
     const assets = Array.isArray(override && override.mediaAssets !== undefined ? override.mediaAssets : mediaAssets) ? (override && override.mediaAssets !== undefined ? override.mediaAssets : mediaAssets) : [];
     const images = assets.filter(a => String(a?.mimeType || "").startsWith("image/") || String(a?.resourceType || "") === "image");
     const videos = assets.filter(a => String(a?.mimeType || "").startsWith("video/") || String(a?.resourceType || "") === "video");
@@ -580,6 +583,25 @@ app.post("/api/content", auth, async (req, res) => {
       }
       if (Object.keys(entry).length) perPlatformOverrides[platform] = entry;
     }
+    // Platform-specific publishing settings. Only selected platforms and supported fields are retained.
+    const rawPlatformSettings = req.body.platformSettings && typeof req.body.platformSettings === "object" ? req.body.platformSettings : {};
+    const platformSettings = {};
+    for (const platform of platforms) {
+      const raw = rawPlatformSettings[platform] && typeof rawPlatformSettings[platform] === "object" ? rawPlatformSettings[platform] : {};
+      const clean = {};
+      if (platform === "linkedin") clean.visibility = raw.visibility === "CONNECTIONS" ? "CONNECTIONS" : "PUBLIC";
+      if (platform === "x") clean.replySettings = ["everyone","following","mentionedUsers"].includes(raw.replySettings) ? raw.replySettings : "everyone";
+      if (platform === "youtube") {
+        clean.title = typeof raw.title === "string" ? raw.title.trim().slice(0, 100) : "";
+        clean.privacyStatus = ["public","unlisted","private"].includes(raw.privacyStatus) ? raw.privacyStatus : "public";
+        clean.categoryId = typeof raw.categoryId === "string" ? raw.categoryId : "22";
+        clean.madeForKids = Boolean(raw.madeForKids);
+        clean.tags = Array.isArray(raw.tags) ? raw.tags.map(x => String(x).trim()).filter(Boolean).slice(0, 500) : [];
+      }
+      clean.hashtags = Array.isArray(raw.hashtags) ? raw.hashtags.map(x => String(x).trim()).filter(Boolean).slice(0, 30) : [];
+      clean.mentions = Array.isArray(raw.mentions) ? raw.mentions.map(x => String(x).trim()).filter(Boolean).slice(0, 20) : [];
+      platformSettings[platform] = clean;
+    }
     // TikTok-only posting settings (privacy, comments/duet/stitch, branded/AI content disclosure).
     // Ignored for every other platform; only ever applied when tiktok is a selected platform.
     const rawTiktokSettings = req.body.tiktokSettings && typeof req.body.tiktokSettings === "object" ? req.body.tiktokSettings : {};
@@ -589,7 +611,9 @@ app.post("/api/content", auth, async (req, res) => {
       disableDuet: Boolean(rawTiktokSettings.disableDuet),
       disableStitch: Boolean(rawTiktokSettings.disableStitch),
       isBrandedContent: Boolean(rawTiktokSettings.isBrandedContent),
-      isAigc: Boolean(rawTiktokSettings.isAigc)
+      isAigc: Boolean(rawTiktokSettings.isAigc),
+      hashtags: platformSettings.tiktok?.hashtags || [],
+      mentions: platformSettings.tiktok?.mentions || []
     } : undefined;
     let scheduledFor = null;
     if (requestedStatus === "scheduled") {
@@ -612,7 +636,7 @@ app.post("/api/content", auth, async (req, res) => {
     const item = await Content.create({
       userId: req.auth.id, title: "", body, platforms, status: requestedStatus, scheduledFor,
       mediaUrl: mediaAssets[0]?.secureUrl || "", mediaUrn: "", mediaType: mediaAssets[0]?.resourceType === "video" || String(mediaAssets[0]?.mimeType || "").startsWith("video/") ? "video" : mediaAssets.length ? "image" : "",
-      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets, tiktokSettings,
+      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets, tiktokSettings, platformSettings,
       perPlatformOverrides: Object.keys(perPlatformOverrides).length ? perPlatformOverrides : undefined
     });
     if (publishNow) {
@@ -936,12 +960,23 @@ async function prepareLinkedInImage(user, mediaUrl) {
 // lightweight view object the existing publishXContent(user, item)-style functions can consume as-is.
 function resolvePlatformItem(item, platform) {
   const override = item.perPlatformOverrides && item.perPlatformOverrides[platform];
-  if (!override) return item;
+  const base = item.toObject ? item.toObject() : item;
   return {
-    ...item.toObject ? item.toObject() : item,
-    body: override.body !== undefined ? override.body : item.body,
-    mediaAssets: override.mediaAssets !== undefined ? override.mediaAssets : item.mediaAssets
+    ...base,
+    body: override?.body !== undefined ? override.body : item.body,
+    mediaAssets: override?.mediaAssets !== undefined ? override.mediaAssets : item.mediaAssets,
+    platformSettings: item.platformSettings?.[platform] || undefined
   };
+}
+
+function appendTagsToBody(body, settings) {
+  const base = String(body || '').trim();
+  const hashtags = Array.isArray(settings?.hashtags) ? settings.hashtags : [];
+  const mentions = Array.isArray(settings?.mentions) ? settings.mentions : [];
+  const cleanHash = hashtags.map(x => String(x).trim()).filter(Boolean).map(x => x.startsWith('#') ? x : `#${x.replace(/^#+/, '')}`);
+  const cleanMention = mentions.map(x => String(x).trim()).filter(Boolean).map(x => x.startsWith('@') ? x : `@${x.replace(/^@+/, '')}`);
+  const additions = [...new Set([...cleanMention, ...cleanHash])];
+  return additions.length ? `${base}${base ? "\n\n" : ""}${additions.join(" ")}`.trim() : base;
 }
 
 async function publishLinkedInContent(user, item) {
@@ -950,7 +985,8 @@ async function publishLinkedInContent(user, item) {
   let mediaUrn = "";
   if (Array.isArray(item.mediaAssets) && item.mediaAssets.length) mediaUrn = (await prepareLinkedInMediaFromAsset(user, item.mediaAssets[0])).urn;
   const token = decryptToken(conn.accessTokenEncrypted);
-  const content = { author: conn.memberUrn, commentary: item.body || "", visibility: "PUBLIC", distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] }, lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false };
+  const settings = item.platformSettings || {};
+  const content = { author: conn.memberUrn, commentary: appendTagsToBody(item.body, settings), visibility: settings.visibility === "CONNECTIONS" ? "CONNECTIONS" : "PUBLIC", distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] }, lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false };
   if (mediaUrn) content.content = { media: { id: mediaUrn, ...(item.mediaAltText ? { altText: item.mediaAltText } : {}) } };
   const { response } = await linkedinFetch("https://api.linkedin.com/rest/posts", { method:"POST", headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"}, body:JSON.stringify(content) });
   return response.headers.get("x-restli-id") || "";
@@ -1187,7 +1223,9 @@ app.post("/api/x/media", auth, mediaUpload.single("media"), async (req,res)=>{
 
 async function publishXContent(user,item) {
   const { token } = await getXAccessToken(user);
-  const payload = { text: item.body || "" };
+  const settings = item.platformSettings || {};
+  const payload = { text: appendTagsToBody(item.body, settings) };
+  if (["everyone","following","mentionedUsers"].includes(settings.replySettings)) payload.reply_settings = settings.replySettings;
   if (Array.isArray(item.mediaAssets) && item.mediaAssets.length) {
     const mediaIds=[];
     for (const asset of item.mediaAssets) mediaIds.push(String((await uploadXMedia(user, await fetchAssetBuffer(asset))).id));
@@ -1317,13 +1355,17 @@ async function publishYouTubeContent(user, item) {
   if (!file.mimeType.startsWith("video/")) throw new Error("YouTube requires a video file.");
   if (file.size > 128 * 1024 * 1024 * 1024) throw new Error("YouTube videos must be 128 GB or smaller.");
   const { token } = await getYouTubeAccessToken(user);
+  const settings = item.platformSettings || {};
+  const description = appendTagsToBody(item.body, settings);
+  const title = String(settings.title || deriveYouTubeTitle(item.body)).trim().slice(0, 100) || "Untitled video";
   const metadata = {
     snippet: {
-      title: deriveYouTubeTitle(item.body),
-      description: item.body || "",
-      categoryId: "22"
+      title,
+      description,
+      categoryId: String(settings.categoryId || "22"),
+      ...(Array.isArray(settings.tags) && settings.tags.length ? { tags: settings.tags.map(x => String(x).trim()).filter(Boolean).slice(0, 500) } : {})
     },
-    status: { privacyStatus: "public", selfDeclaredMadeForKids: false }
+    status: { privacyStatus: ["public","unlisted","private"].includes(settings.privacyStatus) ? settings.privacyStatus : "public", selfDeclaredMadeForKids: Boolean(settings.madeForKids) }
   };
   const initResp = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
     method: "POST",
@@ -1481,7 +1523,9 @@ function normalizeTikTokSettings(raw, allowedPrivacyOptions) {
     disableDuet: Boolean(s.disableDuet),
     disableStitch: Boolean(s.disableStitch),
     isBrandedContent,
-    isAigc
+    isAigc,
+    hashtags: Array.isArray(s.hashtags) ? s.hashtags.map(x => String(x).trim()).filter(Boolean).slice(0, 30) : [],
+    mentions: Array.isArray(s.mentions) ? s.mentions.map(x => String(x).trim()).filter(Boolean).slice(0, 20) : []
   };
 }
 
@@ -1493,7 +1537,7 @@ async function publishTikTokPhoto(user, item, assets, tiktokSettings) {
   const settings = normalizeTikTokSettings(tiktokSettings, options);
   const urls=[];
   for(const asset of assets){if(!asset?.secureUrl)throw new Error("TikTok photo is missing its saved media URL."); if(Number(asset.bytes||0)>20*1024*1024)throw new Error("Each TikTok photo must be 20 MB or smaller."); urls.push(mediaProxyUrl(asset));}
-  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,90),description:(item.body||"").slice(0,4000),privacy_level:settings.privacyLevel,disable_comment:settings.disableComment,auto_add_music:false,brand_content_toggle:settings.isBrandedContent,is_aigc:settings.isAigc},source_info:{source:"PULL_FROM_URL",photo_cover_index:0,photo_images:urls},post_mode:"DIRECT_POST",media_type:"PHOTO"})});
+  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/content/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:appendTagsToBody(item.body, settings).slice(0,90),description:appendTagsToBody(item.body, settings).slice(0,4000),privacy_level:settings.privacyLevel,disable_comment:settings.disableComment,auto_add_music:false,brand_content_toggle:settings.isBrandedContent,is_aigc:settings.isAigc},source_info:{source:"PULL_FROM_URL",photo_cover_index:0,photo_images:urls},post_mode:"DIRECT_POST",media_type:"PHOTO"})});
   const id=init.data?.publish_id;if(!id)throw new Error("TikTok did not return a photo publish ID.");return id;
 }
 async function publishTikTokVideo(user,item,asset,tiktokSettings){
@@ -1504,7 +1548,7 @@ async function publishTikTokVideo(user,item,asset,tiktokSettings){
   const {token}=await getTikTokAccessToken(user); const creator=await queryTikTokCreator(token); const info=creator.data||{}; const options=Array.isArray(info.privacy_level_options)?info.privacy_level_options:[];
   const settings = normalizeTikTokSettings(tiktokSettings, options);
   const chunkSize=10*1024*1024,totalChunks=Math.ceil(file.size/chunkSize);
-  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:(item.body||"").slice(0,2200),privacy_level:settings.privacyLevel,disable_duet:settings.disableDuet,disable_comment:settings.disableComment,disable_stitch:settings.disableStitch,brand_content_toggle:settings.isBrandedContent,is_aigc:settings.isAigc},source_info:{source:"FILE_UPLOAD",video_size:file.size,chunk_size:chunkSize,total_chunk_count:totalChunks}})});
+  const init=await tiktokJsonFetch("https://open.tiktokapis.com/v2/post/publish/video/init/",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json; charset=UTF-8"},body:JSON.stringify({post_info:{title:appendTagsToBody(item.body, settings).slice(0,2200),privacy_level:settings.privacyLevel,disable_duet:settings.disableDuet,disable_comment:settings.disableComment,disable_stitch:settings.disableStitch,brand_content_toggle:settings.isBrandedContent,is_aigc:settings.isAigc},source_info:{source:"FILE_UPLOAD",video_size:file.size,chunk_size:chunkSize,total_chunk_count:totalChunks}})});
   const uploadUrl=init.data?.upload_url,publishId=init.data?.publish_id;if(!uploadUrl||!publishId)throw new Error("TikTok did not return an upload URL.");
   for(let offset=0;offset<file.size;offset+=chunkSize){const end=Math.min(offset+chunkSize,file.size)-1;const chunk=file.buffer.subarray(offset,end+1);const r=await fetch(uploadUrl,{method:"PUT",headers:{"Content-Type":mime,"Content-Length":String(chunk.length),"Content-Range":`bytes ${offset}-${end}/${file.size}`},body:chunk});if(!r.ok){const detail=await r.text().catch(()=>"");throw new Error(`TikTok video upload failed (${r.status}).${detail?` ${detail.slice(0,250)}`:""}`);}}
   return publishId;

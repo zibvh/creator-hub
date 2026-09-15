@@ -134,7 +134,7 @@
 #tiktokSettingsLoading,#tiktokSettingsError{font-size:11px;padding:4px 2px}
 #tiktokSettingsError{color:var(--red)}
 
-.schedule-row{display:none;grid-template-columns:1fr 1fr;gap:11px;padding:14px;background:#f7f3ee;border:1px solid var(--line);border-radius:15px;margin-bottom:20px}
+.platform-settings-wrap{display:grid;gap:11px;margin-top:8px}.platform-settings-card{border:1.5px solid var(--line);border-radius:16px;background:#fff;padding:15px;box-shadow:0 3px 10px rgba(20,18,15,.04)}.platform-settings-head{display:flex;align-items:center;gap:9px;margin-bottom:13px}.platform-settings-head .ps-badge{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none}.platform-settings-head strong{font-size:12.5px}.platform-settings-head small{display:block;color:var(--muted);font-size:9.5px;margin-top:2px}.ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ps-field{min-width:0}.ps-field.full{grid-column:1/-1}.ps-label{display:block;font-size:10.5px;font-weight:800;margin-bottom:7px;color:#81786e}.ps-field input,.ps-field select{width:100%;border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:10px 11px;outline:none;font:inherit;font-size:11.5px;color:var(--ink)}.ps-field input:focus,.ps-field select:focus{border-color:#b7b0ff;box-shadow:0 0 0 4px rgba(91,79,255,.08)}.ps-check{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:9px 0}.ps-check input{width:15px;height:15px;accent-color:#5b4fff}.ps-note{font-size:9.5px;color:var(--muted);line-height:1.5;margin-top:6px}.ps-unsupported{padding:11px 12px;border:1px dashed #d5cec5;background:#fbf9f6;border-radius:11px;color:var(--muted);font-size:10.5px;line-height:1.5}.tag-input{display:flex;gap:7px}.tag-input input{flex:1}.tags-preview{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.tag-chip{font-size:9.5px;background:#f0edff;color:#5148c7;border-radius:99px;padding:5px 8px}.tag-help{font-size:9px;color:var(--muted);margin-top:5px;line-height:1.45}..schedule-row{display:none;grid-template-columns:1fr 1fr;gap:11px;padding:14px;background:#f7f3ee;border:1px solid var(--line);border-radius:15px;margin-bottom:20px}
 .schedule-row.show{display:grid}
 .schedule-row label{font-size:10.5px;font-weight:800;display:block;margin-bottom:7px}
 
@@ -226,7 +226,7 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 @media(max-width:820px){.hero h1{font-size:28px}.composer{height:auto;min-height:calc(100dvh - 32px);max-height:calc(100dvh - 32px);border-radius:22px}.composer-panels{overflow:visible;padding:4px 16px 16px}.composer-foot{padding:12px 14px;position:sticky;bottom:0}.foot-actions{width:100%}.foot-nav{flex:1}.foot-nav button{flex:1;justify-content:center}.upload-status{margin:0 14px 10px}.schedule-row{grid-template-columns:1fr 1fr}}
 @media(max-width:820px){.top{height:62px;padding:0 14px}.layout{display:block}.sidebar{display:none}.main{padding:25px 14px 85px}.hero{align-items:flex-start;flex-direction:column}.hero-actions{width:100%}.hero-actions button{flex:1;justify-content:center}.overview{grid-template-columns:1fr 1fr}.overview .main-stat{grid-column:1/-1}.composer{height:auto;min-height:calc(100dvh - 28px);max-height:calc(100dvh - 28px);border-radius:18px}.composer-body{overflow:auto}.composer-panels{overflow:visible}.composer-foot{position:sticky;bottom:0}}
 @media(max-width:520px){h1{font-size:35px}.overview{gap:8px}.stat{min-height:105px;padding:15px;border-radius:14px}.stat-value{font-size:29px}.dashboard-grid{gap:12px}.panel{border-radius:15px}.content-item{grid-template-columns:45px minmax(0,1fr) 32px;gap:9px}.content-thumb{width:45px;height:45px}.content-body{max-width:100%}.composer-head{padding:16px 16px 0}.composer-heading h2{font-size:18px}.composer-heading p{display:none}.composer-mark{width:36px;height:36px}.composer-panels{padding:16px}.platform-grid{grid-template-columns:1fr 1fr}.schedule-row{grid-template-columns:1fr}.composer-foot{padding:11px 12px}.composer-foot .secondary{padding:10px}.preview-switch{max-width:100%}}
-.content-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.content-action{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:8px 10px;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;transition:.18s}.content-action:hover{background:#f6f2ed;transform:translateY(-1px)}.content-action svg{width:14px;height:14px}.content-action.danger{color:#b53a31}.content-action.danger:hover{background:#fff1ef;border-color:#efc4bf}.content-item{align-items:center}.content-item .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.content-item .pill{font-size:9px}.draft-continue{color:#fff;background:#1c1917;border-color:#1c1917}.draft-continue:hover{background:#2a2521}</style>
+.content-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.content-action{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:8px 10px;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;transition:.18s}.content-action:hover{background:#f6f2ed;transform:translateY(-1px)}.content-action svg{width:14px;height:14px}.content-action.danger{color:#b53a31}.content-action.danger:hover{background:#fff1ef;border-color:#efc4bf}.content-item{align-items:center}.content-item .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.content-item .pill{font-size:9px}.draft-continue{color:#fff;background:#1c1917;border-color:#1c1917}.draft-continue:hover{background:#2a2521}@media(max-width:820px){.modal{padding:0;align-items:flex-end}.composer{width:100%;height:min(100dvh,900px);min-height:0;max-height:100dvh;border-radius:22px 22px 0 0}.composer-head{padding-top:14px}.composer-panels{padding-bottom:20px}.notice-modal{padding:12px;align-items:flex-end}.notice-card{width:100%;max-height:calc(100dvh - 24px);overflow:auto;border-radius:22px 22px 16px 16px;padding:22px 18px calc(18px + env(safe-area-inset-bottom))}.platform-settings-card,.tiktok-card,.override-card{padding:13px}.ps-grid{grid-template-columns:1fr}.ps-field.full{grid-column:auto}.composer-foot{padding-bottom:calc(11px + env(safe-area-inset-bottom))}.foot-nav{min-width:0}.foot-nav button{min-width:0}.secondary,.primary{min-height:42px}}@media(max-width:420px){.composer{border-radius:18px 18px 0 0}.composer-head{padding-left:13px;padding-right:13px}.composer-panels{padding-left:12px;padding-right:12px}.composer-steps{gap:3px;overflow-x:auto}.c-step{min-width:0}.c-step-dot{width:20px;height:20px}.platform-grid{gap:7px}.platform-card{padding:11px 10px}.composer-foot{padding-left:10px;padding-right:10px}.foot-actions{gap:6px}.foot-nav{gap:5px}.secondary,.primary{padding:9px 10px;font-size:10.5px}.notice-title{font-size:22px}}</style>
 </head>
 <body>
 <div class="app">
@@ -270,9 +270,14 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 <label class="tt-check"><input type="checkbox" id="tiktokBrandedContent"> This is branded content (paid promotion)</label>
 <label class="tt-check"><input type="checkbox" id="tiktokAigc"> This content is AI-generated</label>
 </div>
+<div class="tt-group"><span class="tt-group-label">Hashtags & mentions</span><div class="ps-grid"><div class="ps-field"><label class="ps-label">Hashtags</label><input id="tiktokHashtags" type="text" placeholder="#fyp #creovah #contentcreator"><div class="tag-help">Separate with spaces or commas.</div></div><div class="ps-field"><label class="ps-label">Mentions / tags</label><input id="tiktokMentions" type="text" placeholder="@creator @brand"><div class="tag-help">These are added to the caption text.</div></div></div></div>
 </div>
 </div>
 </div>
+</div>
+<div class="field" id="platformSettingsField" style="display:none">
+  <div class="c-panel-head" style="margin-bottom:11px"><h3>Platform settings</h3><p>Only settings supported by the selected platform are shown.</p></div>
+  <div id="platformSettingsWrap" class="platform-settings-wrap"></div>
 </div>
 
 <div class="c-panel" id="cPanelCustomize" data-step-key="customize">
@@ -322,7 +327,7 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 <script>
 const t=localStorage.getItem('creovah_token');if(!t)location.href='/auth.html';
 const $=id=>document.getElementById(id);let user=null,items=[],selectedPreviewPlatform=null,selectedFile=null,selectedFiles=[],selectedFilePreviews=[],uploadedMedia=null,editingId=null,originalAltText='',composerMode='draft',actionBusy=false;
-let customizeChoices={},overrideContent={};// customizeChoices[p]={media:bool,body:bool}; overrideContent[p]={body:'',files:[],filePreviews:[]}
+let platformSettingsState={},customizeChoices={},overrideContent={};// customizeChoices[p]={media:bool,body:bool}; overrideContent[p]={body:'',files:[],filePreviews:[]}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function notice(title,msg,type='success'){const card=$('noticeCard');card.classList.remove('success','failure');card.classList.add(type);$('noticeTitle').textContent=title;$('noticeMessage').textContent=msg;$('noticeIcon').innerHTML=`<i data-lucide="${type==='success'?'check':'circle-alert'}"></i>`;$('noticeModal').classList.add('open');lucide.createIcons()}
 function closeNotice(){$('noticeModal').classList.remove('open')}$('noticeAction').onclick=closeNotice;
@@ -340,7 +345,7 @@ function showError(title,msg){
 function connectedPlatforms(){const a=[];if(user?.connections?.linkedin?.connected)a.push('linkedin');if(user?.connections?.facebook?.connected)a.push('facebook');if(user?.connections?.instagram?.connected)a.push('instagram');if(user?.connections?.tiktok?.connected || user?.socials?.tiktok)a.push('tiktok');if(user?.connections?.x?.connected)a.push('x');if(user?.connections?.youtube?.connected)a.push('youtube');return a}
 function logo(p){const brandLogos={tiktok:'https://cdn.simpleicons.org/tiktok/ffffff',linkedin:'https://cdn.simpleicons.org/linkedin/ffffff'};return brandLogos[p]?`<img class="brand-logo" src="${brandLogos[p]}" alt="${p}" loading="lazy">`:`<i data-lucide="${p}"></i>`}
 function updateStats(){$('totalCount').textContent=items.length;$('connected').textContent=connectedPlatforms().length;$('scheduledCount').textContent=items.filter(x=>x.status==='scheduled').length;$('publishedCount').textContent=items.filter(x=>x.status==='published').length}
-function renderPlatforms(){const list=connectedPlatforms();$('platformChoices').innerHTML=list.length?list.map(p=>`<button type="button" class="platform-card" data-platform="${p}"><div class="p-icon ${p}">${logo(p)}</div><span class="p-name">${p[0].toUpperCase()+p.slice(1)}</span><span class="p-check"><i data-lucide="check" style="width:11px"></i></span></button>`).join(''):`<div class="platform-empty">No connected social accounts. Connect one in Settings.</div>`;document.querySelectorAll('#platformChoices .platform-card').forEach(b=>b.onclick=()=>{b.classList.toggle('on');renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();renderCustomizeList()});$('platformList').innerHTML=list.length?list.map(p=>`<div class="platform-row"><div class="platform-logo ${p}">${logo(p)}</div><div><strong>${p[0].toUpperCase()+p.slice(1)}</strong><small>Connected</small></div><span class="connected-dot"></span></div>`).join(''):`<div class="empty"><div class="empty-icon"><i data-lucide="link-2-off"></i></div><p>Connect a social account in Settings.</p></div>`;lucide.createIcons()}
+function renderPlatforms(){const list=connectedPlatforms();$('platformChoices').innerHTML=list.length?list.map(p=>`<button type="button" class="platform-card" data-platform="${p}"><div class="p-icon ${p}">${logo(p)}</div><span class="p-name">${p[0].toUpperCase()+p.slice(1)}</span><span class="p-check"><i data-lucide="check" style="width:11px"></i></span></button>`).join(''):`<div class="platform-empty">No connected social accounts. Connect one in Settings.</div>`;document.querySelectorAll('#platformChoices .platform-card').forEach(b=>b.onclick=()=>{b.classList.toggle('on');renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();renderPlatformSettings();renderCustomizeList()});$('platformList').innerHTML=list.length?list.map(p=>`<div class="platform-row"><div class="platform-logo ${p}">${logo(p)}</div><div><strong>${p[0].toUpperCase()+p.slice(1)}</strong><small>Connected</small></div><span class="connected-dot"></span></div>`).join(''):`<div class="empty"><div class="empty-icon"><i data-lucide="link-2-off"></i></div><p>Connect a social account in Settings.</p></div>`;lucide.createIcons()}
 function thumb(x){if(x.mediaUrl)return `<img src="${esc(x.mediaUrl)}" alt="">`;return `<i data-lucide="${x.mediaType==='video'?'video':'file-text'}"></i>`}
 function renderContent(){
   if(!items.length){$('contentList').innerHTML='<div class="empty"><div class="empty-icon"><i data-lucide="notebook-pen"></i></div><p>No content yet. Create your first post.</p></div>';lucide.createIcons();return}
@@ -362,7 +367,7 @@ async function deleteContent(id){
 }
 function resetCustomize(){customizeChoices={};Object.values(overrideContent).forEach(o=>o.filePreviews?.forEach(p=>URL.revokeObjectURL(p.url)));overrideContent={}}
 function populateModal(item,mode){
-  composerMode=mode;editingId=item?._id||null;originalAltText=item?.mediaAltText||'';resetMedia(false);resetCustomize();$('body').value=item?.body||'';$('altText').value=item?.mediaAltText||'';$('count').textContent=$('body').value.length;
+  composerMode=mode;editingId=item?._id||null;originalAltText=item?.mediaAltText||'';resetMedia(false);resetCustomize();platformSettingsState=JSON.parse(JSON.stringify(item?.platformSettings||{}));$('body').value=item?.body||'';$('altText').value=item?.mediaAltText||'';$('count').textContent=$('body').value.length;
   document.querySelectorAll('#platformChoices .platform-card').forEach(x=>x.classList.toggle('on',(item?.platforms||[]).includes(x.dataset.platform)));
   if(!item){const list=connectedPlatforms();if(list.length)document.querySelector(`#platformChoices .platform-card[data-platform="${list[0]}"]`)?.classList.add('on')}
   const now=new Date(Date.now()+60000);$('scheduleDate').min=new Date().toISOString().slice(0,10);$('scheduleDate').value=item?.scheduledFor?new Date(item.scheduledFor).toISOString().slice(0,10):now.toISOString().slice(0,10);$('scheduleTime').value=item?.scheduledFor?new Date(item.scheduledFor).toTimeString().slice(0,5):now.toTimeString().slice(0,5);
@@ -383,7 +388,7 @@ function populateModal(item,mode){
   $('reviewSubcopy').textContent=scheduleMode?'Check how this looks on each platform, then set the time.':'Check how this looks on each platform, then send it.';
   $('mediaFile').disabled=editMode;$('mediaFile').closest('.upload').style.display=editMode?'none':'';$('removeMedia').style.display=editMode?'none':'';
   const note=$('mediaEditNote');if(note) {note.textContent=mode==='scheduled-edit'?'Media is fixed for scheduled LinkedIn posts. Create a new post to use different media.':'Published LinkedIn media cannot be changed here. Create a new post if you want to use different media.';note.style.display=editMode?'block':'none'}
-  renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();renderCustomizeList();buildStepRail();goToStep(0);lucide.createIcons();
+  renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();renderPlatformSettings();renderCustomizeList();buildStepRail();goToStep(0);lucide.createIcons();
 }
 function activeStepKeys(){
   const base=['platforms'];
@@ -466,21 +471,62 @@ async function loadTiktokCreatorInfo(){
     $('tiktokAllowComment').checked=!d.commentDisabled;$('tiktokAllowComment').disabled=Boolean(d.commentDisabled);
     $('tiktokAllowDuet').checked=!d.duetDisabled;$('tiktokAllowDuet').disabled=Boolean(d.duetDisabled);
     $('tiktokAllowStitch').checked=!d.stitchDisabled;$('tiktokAllowStitch').disabled=Boolean(d.stitchDisabled);
+    const ts=platformSettingsState.tiktok||{};$('tiktokHashtags').value=(ts.hashtags||[]).join(' ');$('tiktokMentions').value=(ts.mentions||[]).join(' ');$('tiktokBrandedContent').checked=Boolean(item?.tiktokSettings?.isBrandedContent);$('tiktokAigc').checked=Boolean(item?.tiktokSettings?.isAigc);
     $('tiktokSettingsLoading').style.display='none';$('tiktokSettingsForm').style.display='block';
   }catch(e){
     $('tiktokSettingsLoading').style.display='none';$('tiktokSettingsError').style.display='block';$('tiktokSettingsError').textContent=e.message||'Unable to load TikTok posting settings.';
   }
 }
+function splitTags(value){return String(value||'').split(/[,\s]+/).map(x=>x.trim()).filter(Boolean)}
+function renderPlatformSettings(){
+  const field=$('platformSettingsField'),wrap=$('platformSettingsWrap'); if(!field||!wrap)return;
+  const list=selectedPlatforms();
+  const nonTikTok=list.filter(p=>p!=='tiktok');
+  field.style.display=nonTikTok.length?'':'none';
+  wrap.innerHTML=nonTikTok.map(p=>{
+    const s=platformSettingsState[p]||{};
+    const badge=`<div class="ps-badge ${p}" style="background:${PLATFORM_ICON_BG[p]}">${logo(p)}</div>`;
+    let controls='';
+    if(p==='youtube') controls=`<div class="ps-grid"><div class="ps-field full"><label class="ps-label">YouTube title</label><input data-ps="youtube:title" maxlength="100" value="${esc(s.title||'')}" placeholder="Leave blank to use the first line of your caption"></div><div class="ps-field"><label class="ps-label">Visibility</label><select data-ps="youtube:privacyStatus"><option value="public" ${s.privacyStatus==='public'||!s.privacyStatus?'selected':''}>Public</option><option value="unlisted" ${s.privacyStatus==='unlisted'?'selected':''}>Unlisted</option><option value="private" ${s.privacyStatus==='private'?'selected':''}>Private</option></select></div><div class="ps-field"><label class="ps-label">Category</label><select data-ps="youtube:categoryId"><option value="22" ${(!s.categoryId||s.categoryId==='22')?'selected':''}>People & Blogs</option><option value="10" ${s.categoryId==='10'?'selected':''}>Music</option><option value="20" ${s.categoryId==='20'?'selected':''}>Gaming</option><option value="24" ${s.categoryId==='24'?'selected':''}>Entertainment</option><option value="27" ${s.categoryId==='27'?'selected':''}>Education</option></select></div><div class="ps-field full"><label class="ps-label">YouTube tags</label><input data-ps="youtube:tags" value="${esc((s.tags||[]).join(', '))}" placeholder="afrobeats, tutorial, creator"></div><label class="ps-check full"><input type="checkbox" data-ps="youtube:madeForKids" ${s.madeForKids?'checked':''}> Made for kids</label></div><div class="ps-note">YouTube tags are separate from hashtags. Hashtags and mentions below are added to the description.</div>`;
+    else if(p==='linkedin') controls=`<div class="ps-grid"><div class="ps-field"><label class="ps-label">Post visibility</label><select data-ps="linkedin:visibility"><option value="PUBLIC" ${s.visibility!=='CONNECTIONS'?'selected':''}>Anyone (Public)</option><option value="CONNECTIONS" ${s.visibility==='CONNECTIONS'?'selected':''}>Connections only</option></select></div><div class="ps-field"><label class="ps-label">Hashtags</label><input data-ps="linkedin:hashtags" value="${esc((s.hashtags||[]).join(' '))}" placeholder="#buildinpublic #creovah"></div><div class="ps-field full"><label class="ps-label">Mentions / tags</label><input data-ps="linkedin:mentions" value="${esc((s.mentions||[]).join(' '))}" placeholder="@person"></div></div><div class="ps-note">Hashtags are added to the post. Plain @handles are added as text; native LinkedIn person tagging needs account lookup.</div>`;
+    else if(p==='x') controls=`<div class="ps-grid"><div class="ps-field"><label class="ps-label">Who can reply</label><select data-ps="x:replySettings"><option value="everyone" ${!s.replySettings||s.replySettings==='everyone'?'selected':''}>Everyone</option><option value="following" ${s.replySettings==='following'?'selected':''}>Accounts you follow</option><option value="mentionedUsers" ${s.replySettings==='mentionedUsers'?'selected':''}>Only mentioned accounts</option></select></div><div class="ps-field"><label class="ps-label">Hashtags</label><input data-ps="x:hashtags" value="${esc((s.hashtags||[]).join(' '))}" placeholder="#creovah #buildinpublic"></div><div class="ps-field full"><label class="ps-label">Mentions / tags</label><input data-ps="x:mentions" value="${esc((s.mentions||[]).join(' '))}" placeholder="@creator"></div></div>`;
+    else controls=`<div class="ps-grid"><div class="ps-field"><label class="ps-label">Hashtags</label><input data-ps="${p}:hashtags" value="${esc((s.hashtags||[]).join(' '))}" placeholder="#creovah #contentcreator"></div><div class="ps-field"><label class="ps-label">Mentions / tags</label><input data-ps="${p}:mentions" value="${esc((s.mentions||[]).join(' '))}" placeholder="@creator @brand"></div></div><div class="ps-note">Creovah can add these to the caption. Other platform-specific publishing controls are not currently exposed for ${PLATFORM_LABEL[p]}.</div>`;
+    return `<div class="platform-settings-card"><div class="platform-settings-head">${badge}<div><strong>${PLATFORM_LABEL[p]}</strong><small>Platform-specific options</small></div></div>${controls}</div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-ps]').forEach(el=>el.oninput=()=>savePlatformSetting(el));
+  wrap.querySelectorAll('[data-ps]').forEach(el=>el.onchange=()=>savePlatformSetting(el));
+  lucide.createIcons();
+}
+function savePlatformSetting(el){
+  const [platform,key]=el.dataset.ps.split(':'); platformSettingsState[platform]=platformSettingsState[platform]||{};
+  let value=el.type==='checkbox'?el.checked:el.value;
+  if(key==='hashtags'||key==='mentions'||key==='tags')value=splitTags(value);
+  platformSettingsState[platform][key]=value;
+  if(platform==='youtube'&&key==='title')updatePreview();
+}
 function tiktokSettingsPayload(){
   const privacyLevel=document.querySelector('input[name="tiktokPrivacy"]:checked')?.value||'';
+  platformSettingsState.tiktok=platformSettingsState.tiktok||{};
+  platformSettingsState.tiktok.hashtags=splitTags($('tiktokHashtags')?.value);
+  platformSettingsState.tiktok.mentions=splitTags($('tiktokMentions')?.value);
   return{
     privacyLevel,
     disableComment:!$('tiktokAllowComment').checked,
     disableDuet:!$('tiktokAllowDuet').checked,
     disableStitch:!$('tiktokAllowStitch').checked,
     isBrandedContent:$('tiktokBrandedContent').checked,
-    isAigc:$('tiktokAigc').checked
+    isAigc:$('tiktokAigc').checked,
+    hashtags:platformSettingsState.tiktok.hashtags,
+    mentions:platformSettingsState.tiktok.mentions
   };
+}
+function platformSettingsPayload(){
+  const out={};
+  for(const p of selectedPlatforms()){
+    const s=platformSettingsState[p]||{}; out[p]={...s};
+    if(p==='tiktok'){out[p].hashtags=splitTags($('tiktokHashtags')?.value);out[p].mentions=splitTags($('tiktokMentions')?.value)}
+  }
+  return out;
 }
 const PLATFORM_LABEL={linkedin:'LinkedIn',facebook:'Facebook',instagram:'Instagram',x:'X',tiktok:'TikTok',youtube:'YouTube'};
 const PLATFORM_ICON_BG={linkedin:'#0a66c2',facebook:'#1877f2',instagram:'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',x:'#111',tiktok:'#111',youtube:'#ff0000'};
@@ -592,7 +638,7 @@ function renderOverrideEditors(){
   lucide.createIcons();
 }
 function openModal(mode='draft'){populateModal(null,mode)}
-function closeModal(){if($('publishBtn').classList.contains('is-loading'))return;$('modal').classList.remove('open');editingId=null;composerMode='draft';resetMedia();resetCustomize();$('tiktokSettingsField').style.display='none';$('tiktokBrandedContent').checked=false;$('tiktokAigc').checked=false}
+function closeModal(){if($('publishBtn').classList.contains('is-loading'))return;$('modal').classList.remove('open');editingId=null;composerMode='draft';resetMedia();resetCustomize();$('tiktokSettingsField').style.display='none';$('tiktokBrandedContent').checked=false;$('tiktokAigc').checked=false;platformSettingsState={}}
 $('publishModalBtn').onclick=()=>openModal('publish');$('scheduleModalBtn').onclick=()=>openModal('schedule');$('customizeModalBtn').onclick=()=>openModal('customize');$('quickDraft').onclick=()=>openModal('publish');$('quickSchedule').onclick=()=>openModal('schedule');$('close').onclick=closeModal;$('cancel').onclick=closeModal;
 $('body').oninput=()=>{$('count').textContent=$('body').value.length;updatePreview()};
 async function prepareTikTokImage(file){
@@ -724,7 +770,7 @@ async function submitContent(action){
     if(selectedFiles.length)mediaAssets=await uploadMedia();
     else if(editingId){const existing=items.find(x=>x._id===editingId);mediaAssets=existing?.mediaAssets||[]}
     const payload={body:$('body').value.trim(),platforms,status:action==='schedule'?'scheduled':'draft',publishNow:action==='publish',scheduledFor:action==='schedule'?scheduledDate:null,mediaAssets,mediaAltText:$('altText').value.trim()};
-    if(platforms.includes('tiktok'))payload.tiktokSettings=tiktokSettingsPayload();
+    if(platforms.includes('tiktok'))payload.tiktokSettings=tiktokSettingsPayload();payload.platformSettings=platformSettingsPayload();
     if(composerMode==='customize'&&(action==='publish'||action==='schedule'))payload.perPlatformOverrides=await buildPerPlatformOverrides();
     if(editingId&&action==='draft'){
       const r=await fetch('/api/content/'+editingId,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({body:payload.body,mediaAssets})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to save the draft.');const i=items.findIndex(x=>x._id===editingId);if(i>=0)items[i]=d.item;renderContent();closeModal();notice('Draft saved','Your changes were saved.','success');return;
