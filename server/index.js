@@ -160,8 +160,6 @@ const Content = mongoose.model("Content", contentSchema);
 
 const notificationSchema = new mongoose.Schema({ userId:{type:mongoose.Schema.Types.ObjectId,ref:"User",index:true}, title:{type:String,required:true,trim:true,maxlength:120}, message:{type:String,required:true,trim:true,maxlength:2000}, read:{type:Boolean,default:false}, createdAt:{type:Date,default:Date.now} },{timestamps:true});
 const Notification = mongoose.model("Notification", notificationSchema);
-const legalSchema = new mongoose.Schema({ key:{type:String,unique:true}, terms:{type:String,default:""}, privacy:{type:String,default:""}, updatedAt:{type:Date,default:Date.now} });
-const Legal = mongoose.model("Legal", legalSchema);
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB connected"))
@@ -206,6 +204,11 @@ function safeUser(user) {
         connected: Boolean(conn.tiktok && conn.tiktok.connected),
         name: conn.tiktok ? conn.tiktok.name || "" : "",
         username: conn.tiktok ? conn.tiktok.username || "" : ""
+      },
+      youtube: {
+        connected: Boolean(conn.youtube && conn.youtube.connected),
+        channelId: conn.youtube ? conn.youtube.channelId || "" : "",
+        channelTitle: conn.youtube ? conn.youtube.channelTitle || "" : ""
       }
     },
     notifications: Boolean(user.notifications),
@@ -1017,7 +1020,10 @@ app.get("/api/admin/users",auth,adminOnly,async(req,res)=>{
     connections:{
       facebook:{connected:Boolean(u.connections?.facebook?.connected),pageId:u.connections?.facebook?.pageId||"",pageName:u.connections?.facebook?.pageName||""},
       instagram:{connected:Boolean(u.connections?.instagram?.connected),igBusinessAccountId:u.connections?.instagram?.igBusinessAccountId||"",igUsername:u.connections?.instagram?.igUsername||"",pageId:u.connections?.instagram?.pageId||""},
-      linkedin:{connected:Boolean(u.connections?.linkedin?.connected),memberId:u.connections?.linkedin?.memberId||"",memberUrn:u.connections?.linkedin?.memberUrn||"",name:u.connections?.linkedin?.name||"",email:u.connections?.linkedin?.email||""}
+      linkedin:{connected:Boolean(u.connections?.linkedin?.connected),memberId:u.connections?.linkedin?.memberId||"",memberUrn:u.connections?.linkedin?.memberUrn||"",name:u.connections?.linkedin?.name||"",email:u.connections?.linkedin?.email||""},
+      x:{connected:Boolean(u.connections?.x?.connected),userId:u.connections?.x?.userId||"",username:u.connections?.x?.username||"",name:u.connections?.x?.name||""},
+      tiktok:{connected:Boolean(u.connections?.tiktok?.connected),username:u.connections?.tiktok?.username||"",name:u.connections?.tiktok?.name||""},
+      youtube:{connected:Boolean(u.connections?.youtube?.connected),channelId:u.connections?.youtube?.channelId||"",channelTitle:u.connections?.youtube?.channelTitle||""}
     }
   }));
   res.json({users:adminUsers,content});
@@ -1045,8 +1051,6 @@ app.post("/api/admin/notifications",auth,adminOnly,async(req,res)=>{
 });
 app.get("/api/notifications",auth,async(req,res)=>res.json({items:await Notification.find({userId:req.auth.id}).sort({createdAt:-1}).limit(50).lean()}));
 app.post("/api/notifications/:id/read",auth,async(req,res)=>{await Notification.updateOne({_id:req.params.id,userId:req.auth.id},{$set:{read:true}});res.json({ok:true});});
-app.get("/api/legal",async(req,res)=>{const legal=await Legal.findOne({key:"site"}).lean();res.json({legal:legal||{terms:"",privacy:""}});});
-app.post("/api/admin/legal",auth,adminOnly,async(req,res)=>{const legal=await Legal.findOneAndUpdate({key:"site"},{key:"site",terms:String(req.body.terms||""),privacy:String(req.body.privacy||""),updatedAt:new Date()},{upsert:true,new:true});res.json({legal});});
 
 // --- X OAuth 2.0 PKCE + publishing ---
 const X_CLIENT_ID = process.env.X_CLIENT_ID;
