@@ -59,7 +59,8 @@ const userSchema = new mongoose.Schema({
     facebook: { type: Boolean, default: false },
     tiktok: { type: Boolean, default: false },
     linkedin: { type: Boolean, default: false },
-    x: { type: Boolean, default: false }
+    x: { type: Boolean, default: false },
+    youtube: { type: Boolean, default: false }
   },
   connections: {
     instagram: {
@@ -106,6 +107,14 @@ const userSchema = new mongoose.Schema({
       refreshTokenEncrypted: String,
       tokenExpiresAt: Date,
       refreshTokenExpiresAt: Date
+    },
+    youtube: {
+      connected: { type: Boolean, default: false },
+      channelId: String,
+      channelTitle: String,
+      accessTokenEncrypted: String,
+      refreshTokenEncrypted: String,
+      tokenExpiresAt: Date
     }
   },
   notifications: { type: Boolean, default: false },
@@ -270,7 +279,7 @@ app.post("/api/auth/register", async (req, res) => {
       role: "user",
       profileType: "",
       discoverySource: "",
-      socials: { instagram: false, facebook: false, tiktok: false, linkedin: false, x: false },
+      socials: { instagram: false, facebook: false, tiktok: false, linkedin: false, x: false, youtube: false },
       notifications: false,
       onboardingCompleted: false
     };
@@ -387,15 +396,29 @@ app.post("/api/media/upload", auth, mediaUpload.array("media", 35), async (req, 
   }
 });
 
+// Real API constraints per platform, enforced here on the server so they can never be bypassed by
+// the client (a modified request body, a stale UI, or a bug in the composer's own validation).
+// Sizes in bytes. maxImages/maxVideos: 0 means that media type is not accepted at all.
 const PLATFORM_RULES = {
-  linkedin: { name: "LinkedIn", maxText: 3000, maxImages: 1, maxVideos: 1, mediaRequired: false },
-  x: { name: "X", maxText: 280, maxImages: 4, maxVideos: 1, mediaRequired: false },
-  instagram: { name: "Instagram", maxText: 2200, maxImages: 10, maxVideos: 1, mediaRequired: true },
-  facebook: { name: "Facebook", maxText: 63206, maxImages: 10, maxVideos: 1, mediaRequired: false },
-  tiktok: { name: "TikTok", maxText: 4000, maxImages: 35, maxVideos: 1, mediaRequired: true }
+  linkedin: { name: "LinkedIn", maxText: 3000, maxImages: 1, maxVideos: 1, mixedMedia: false, mediaRequired: false, maxImageBytes: 10 * 1024 * 1024, maxVideoBytes: 5 * 1024 * 1024 * 1024, imageTypes: ["image/jpeg", "image/png", "image/gif"], videoTypes: ["video/mp4"] },
+  x: { name: "X", maxText: 280, maxImages: 4, maxVideos: 1, mixedMedia: false, mediaRequired: false, maxImageBytes: 5 * 1024 * 1024, maxVideoBytes: 512 * 1024 * 1024, imageTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"], videoTypes: ["video/mp4", "video/quicktime", "video/webm"] },
+  instagram: { name: "Instagram", maxText: 2200, maxImages: 10, maxVideos: 1, mixedMedia: false, mediaRequired: true, maxImageBytes: 30 * 1024 * 1024, maxVideoBytes: 4 * 1024 * 1024 * 1024, imageTypes: ["image/jpeg", "image/png"], videoTypes: ["video/mp4", "video/quicktime"] },
+  facebook: { name: "Facebook", maxText: 63206, maxImages: 10, maxVideos: 1, mixedMedia: false, mediaRequired: false, maxImageBytes: 30 * 1024 * 1024, maxVideoBytes: 10 * 1024 * 1024 * 1024, imageTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"], videoTypes: ["video/mp4", "video/quicktime"] },
+  tiktok: { name: "TikTok", maxText: 4000, maxImages: 35, maxVideos: 1, mixedMedia: false, mediaRequired: true, maxImageBytes: 20 * 1024 * 1024, maxVideoBytes: 4 * 1024 * 1024 * 1024, imageTypes: ["image/jpeg", "image/png", "image/webp"], videoTypes: ["video/mp4", "video/quicktime", "video/webm"] },
+  youtube: { name: "YouTube", maxText: 5000, maxImages: 0, maxVideos: 1, mixedMedia: false, mediaRequired: true, maxImageBytes: 0, maxVideoBytes: 128 * 1024 * 1024 * 1024, imageTypes: [], videoTypes: ["video/mp4", "video/quicktime", "video/webm", "video/x-msvideo", "video/x-matroska"] }
 };
+
+// Builds one error, and — when the post targets more than one platform — appends a pointer at
+// "Customize per platform" so the user has a concrete way to fix a conflict that only exists
+// because the same content is being sent to platforms with different rules.
+function platformError(platform, message, platformCount) {
+  const suffix = platformCount > 1 ? " Use \"Customize per platform\" to give this platform its own content." : "";
+  return { platform, message: message + suffix };
+}
+
 function validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings, perPlatformOverrides }) {
   const errors = [];
+  const platformCount = platforms.length;
   for (const platform of platforms) {
     const rule = PLATFORM_RULES[platform]; if (!rule) continue;
     const override = perPlatformOverrides && perPlatformOverrides[platform];
@@ -403,20 +426,43 @@ function validateContentForPlatforms({ platforms, body, mediaAssets, action, tik
     const assets = Array.isArray(override && override.mediaAssets !== undefined ? override.mediaAssets : mediaAssets) ? (override && override.mediaAssets !== undefined ? override.mediaAssets : mediaAssets) : [];
     const images = assets.filter(a => String(a?.mimeType || "").startsWith("image/") || String(a?.resourceType || "") === "image");
     const videos = assets.filter(a => String(a?.mimeType || "").startsWith("video/") || String(a?.resourceType || "") === "video");
-    if (text.length > rule.maxText) errors.push({ platform, message: `${rule.name} allows up to ${rule.maxText.toLocaleString()} characters. Your post has ${text.length.toLocaleString()}.` });
-    if (rule.mediaRequired && !assets.length) errors.push({ platform, message: `${rule.name} requires a photo or video for this post.` });
-    if (images.length > rule.maxImages) errors.push({ platform, message: `${rule.name} allows up to ${rule.maxImages} photo${rule.maxImages === 1 ? "" : "s"} in one post.` });
-    if (videos.length > rule.maxVideos) errors.push({ platform, message: `${rule.name} allows ${rule.maxVideos === 1 ? "one video" : `${rule.maxVideos} videos`} in one post.` });
-    if (platform === "tiktok" && images.length && videos.length) errors.push({ platform, message: "TikTok posts must contain photos or one video, not a mixture of both." });
-    if (platform === "tiktok" && videos.length && action === "schedule") errors.push({ platform, message: "TikTok scheduling is not available yet. Publish TikTok posts now instead." });
-    if (platform === "tiktok" && images.some(a => Number(a?.bytes || 0) > 20 * 1024 * 1024)) errors.push({ platform, message: "Each TikTok photo must be 20 MB or smaller." });
-    if (platform === "tiktok" && videos.some(a => Number(a?.bytes || 0) > 4 * 1024 * 1024 * 1024)) errors.push({ platform, message: "TikTok videos must be 4 GB or smaller." });
+    const err = (message) => errors.push(platformError(platform, message, platformCount));
+
+    if (text.length > rule.maxText) err(`${rule.name} allows up to ${rule.maxText.toLocaleString()} characters. Your post has ${text.length.toLocaleString()}.`);
+    if (rule.mediaRequired && !assets.length) err(`${rule.name} requires a photo or video for this post.`);
+
+    if (rule.maxImages === 0 && images.length) {
+      err(`${rule.name} does not accept photos — it only accepts video uploads.`);
+    } else if (images.length > rule.maxImages) {
+      err(`${rule.name} allows up to ${rule.maxImages} photo${rule.maxImages === 1 ? "" : "s"} in one post.`);
+    }
+    if (rule.maxVideos === 0 && videos.length) {
+      err(`${rule.name} does not accept video uploads.`);
+    } else if (videos.length > rule.maxVideos) {
+      err(`${rule.name} allows ${rule.maxVideos === 1 ? "one video" : `${rule.maxVideos} videos`} in one post.`);
+    }
+    if (!rule.mixedMedia && images.length && videos.length) err(`${rule.name} posts must contain photos or one video, not a mixture of both.`);
+
+    const badImageType = images.find(a => rule.imageTypes.length && !rule.imageTypes.includes(String(a?.mimeType || "").toLowerCase()));
+    if (badImageType) err(`${rule.name} only accepts ${rule.imageTypes.map(t => t.split("/")[1].toUpperCase()).join(", ")} images.`);
+    const badVideoType = videos.find(a => rule.videoTypes.length && !rule.videoTypes.includes(String(a?.mimeType || "").toLowerCase()));
+    if (badVideoType) err(`${rule.name} only accepts ${rule.videoTypes.map(t => t.split("/")[1].toUpperCase()).join(", ")} video files.`);
+
+    const oversizedImage = images.find(a => Number(a?.bytes || 0) > rule.maxImageBytes);
+    if (oversizedImage) err(`Each ${rule.name} photo must be ${(rule.maxImageBytes / (1024 * 1024)).toFixed(0)} MB or smaller.`);
+    const oversizedVideo = videos.find(a => Number(a?.bytes || 0) > rule.maxVideoBytes);
+    if (oversizedVideo) {
+      const limitGb = rule.maxVideoBytes / (1024 * 1024 * 1024);
+      err(`${rule.name} videos must be ${limitGb >= 1 ? `${limitGb.toFixed(0)} GB` : `${(rule.maxVideoBytes / (1024 * 1024)).toFixed(0)} MB`} or smaller.`);
+    }
+
+    if (platform === "tiktok" && videos.length && action === "schedule") err("TikTok scheduling is not available yet. Publish TikTok posts now instead.");
     if (platform === "tiktok" && action === "publish") {
       const ts = tiktokSettings || {};
-      if (!ts.privacyLevel) errors.push({ platform, message: "Choose who can view this TikTok post before publishing." });
-      if (ts.isBrandedContent && ts.privacyLevel === "SELF_ONLY") errors.push({ platform, message: "Branded content cannot be set to private on TikTok. Choose a different privacy setting or turn off branded content." });
+      if (!ts.privacyLevel) err("Choose who can view this TikTok post before publishing.");
+      if (ts.isBrandedContent && ts.privacyLevel === "SELF_ONLY") err("Branded content cannot be set to private on TikTok. Choose a different privacy setting or turn off branded content.");
     }
-    if ((platform === "instagram" || platform === "facebook") && (action === "publish" || action === "schedule")) errors.push({ platform, message: `${rule.name} publishing is not connected to Creovah yet.` });
+    if ((platform === "instagram" || platform === "facebook") && (action === "publish" || action === "schedule")) err(`${rule.name} publishing is not connected to Creovah yet.`);
   }
   return errors;
 }
@@ -554,6 +600,7 @@ app.post("/api/content", auth, async (req, res) => {
       if (platform === "linkedin" && !user.connections?.linkedin?.connected) return res.status(400).json({ message: "Connect LinkedIn before publishing or scheduling LinkedIn content." });
       if (platform === "x" && !user.connections?.x?.connected) return res.status(400).json({ message: "Connect X before publishing or scheduling X content." });
       if (platform === "tiktok" && !user.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing or scheduling TikTok content." });
+      if (platform === "youtube" && !user.connections?.youtube?.connected) return res.status(400).json({ message: "Connect YouTube before publishing or scheduling YouTube content." });
     }
     if (action !== "draft") {
       const errors = validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings, perPlatformOverrides });
@@ -573,6 +620,7 @@ app.post("/api/content", auth, async (req, res) => {
           if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, platformItem);
           else if (platform === "x") externalPosts.x = await publishXContent(user, platformItem);
           else if (platform === "tiktok") externalPosts.tiktok = await publishTikTokContent(user, platformItem);
+          else if (platform === "youtube") externalPosts.youtube = await publishYouTubeContent(user, platformItem);
         } catch (platformError) {
           console.error(`${platform} publish failed for ${item._id}:`, platformError);
           publishErrors.push({ platform, message: platformError.message || `Unable to publish to ${platform}.` });
@@ -750,7 +798,7 @@ async function linkedinFetch(url, options = {}) {
 app.get("/api/connections/linkedin/start", auth, (req, res) => {
   try {
     if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) return res.status(500).json({ message: "LinkedIn connection is not configured on the server yet." });
-    const state = createOAuthState(req.auth.id, "linkedin");
+    const state = createOAuthState(req.auth.id, "linkedin", { returnTo: req.query.returnTo });
     const params = new URLSearchParams({
       response_type: "code",
       client_id: LINKEDIN_CLIENT_ID,
@@ -807,15 +855,15 @@ async function completeLinkedInConnection(userId, code) {
 }
 
 app.get("/api/connections/linkedin/callback", async (req, res) => {
+  const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+  const pending = state ? consumeOAuthState(String(state)) : null;
   const redirectToDashboard = (status, reason, message) => {
     const params = new URLSearchParams({ connect: status });
     if (reason) params.set("reason", reason);
     if (message) params.set("message", String(message).slice(0, 500));
-    return res.redirect(`/dashboard.html?${params.toString()}`);
+    return res.redirect(`${safeReturnTo(pending?.returnTo)}?${params.toString()}`);
   };
   try {
-    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
-    const pending = state ? consumeOAuthState(String(state)) : null;
     if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
     if (!code || !pending || pending.platform !== "linkedin") return redirectToDashboard("error", "session-expired");
     const result = await completeLinkedInConnection(pending.userId, String(code));
@@ -921,6 +969,7 @@ async function processSchedules() {
             const platformItem = resolvePlatformItem(item, platform);
             if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, platformItem);
             else if (platform === "x") externalPosts.x = await publishXContent(user, platformItem);
+            else if (platform === "youtube") externalPosts.youtube = await publishYouTubeContent(user, platformItem);
           } catch (platformError) { publishErrors.push({ platform, message: platformError.message || "Publishing failed." }); }
         }
         item.externalPosts = externalPosts; item.externalPostUrn = Object.values(externalPosts).find(Boolean) || "";
@@ -1030,7 +1079,7 @@ app.get("/api/connections/x/start", auth, (req, res) => {
   try {
     if (!X_CLIENT_ID) return res.status(500).json({ message: "X connection is not configured on the server yet." });
     const { verifier, challenge } = createPkcePair();
-    const state = createOAuthState(req.auth.id, "x", { codeVerifier: verifier });
+    const state = createOAuthState(req.auth.id, "x", { codeVerifier: verifier, returnTo: req.query.returnTo });
     const params = new URLSearchParams({ response_type: "code", client_id: X_CLIENT_ID, redirect_uri: X_REDIRECT_URI, scope: X_SCOPES, state, code_challenge: challenge, code_challenge_method: "S256" });
     res.json({ url: `https://x.com/i/oauth2/authorize?${params.toString()}` });
   } catch (error) { console.error("X OAuth start error:", error); res.status(500).json({ message: "Unable to start the X connection." }); }
@@ -1065,13 +1114,13 @@ async function completeXConnection(userId, code, verifier) {
 }
 
 app.get("/api/connections/x/callback", async (req, res) => {
+  const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+  const pending = state ? consumeOAuthState(String(state)) : null;
   const redirectToDashboard = (status, reason, message) => {
     const params = new URLSearchParams({ connect: status }); if (reason) params.set("reason", reason); if (message) params.set("message", String(message).slice(0, 500));
-    return res.redirect(`/dashboard.html?${params.toString()}`);
+    return res.redirect(`${safeReturnTo(pending?.returnTo)}?${params.toString()}`);
   };
   try {
-    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
-    const pending = state ? consumeOAuthState(String(state)) : null;
     if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
     if (!code || !pending || pending.platform !== "x" || !pending.codeVerifier) return redirectToDashboard("error", "session-expired", "The X connection session expired. Please try again.");
     const result = await completeXConnection(pending.userId, String(code), pending.codeVerifier);
@@ -1144,6 +1193,160 @@ async function publishXContent(user,item) {
   return result?.data?.id || "";
 }
 
+// --- YouTube (Google OAuth 2.0 + Data API v3 resumable upload) ---
+const YOUTUBE_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID;
+const YOUTUBE_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET;
+const YOUTUBE_REDIRECT_URI = process.env.YOUTUBE_REDIRECT_URI || `${APP_BASE_URL}/api/connections/youtube/callback`;
+const YOUTUBE_SCOPES = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly";
+
+app.get("/api/connections/youtube/start", auth, (req, res) => {
+  try {
+    if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET) return res.status(500).json({ message: "YouTube connection is not configured on the server yet." });
+    const state = createOAuthState(req.auth.id, "youtube", { returnTo: req.query.returnTo });
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: YOUTUBE_CLIENT_ID,
+      redirect_uri: YOUTUBE_REDIRECT_URI,
+      state,
+      scope: YOUTUBE_SCOPES,
+      access_type: "offline",
+      // Forces Google to always return a refresh_token, even if this user connected before.
+      // Without this, reconnecting an existing user would silently omit the refresh_token
+      // and Creovah would lose the ability to publish once the short-lived access token expires.
+      prompt: "consent"
+    });
+    res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+  } catch (error) {
+    console.error("YouTube OAuth start error:", error);
+    res.status(500).json({ message: "Unable to start the YouTube connection." });
+  }
+});
+
+async function exchangeYouTubeCode(code) {
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: String(code),
+    client_id: YOUTUBE_CLIENT_ID,
+    client_secret: YOUTUBE_CLIENT_SECRET,
+    redirect_uri: YOUTUBE_REDIRECT_URI
+  });
+  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || "YouTube token exchange failed.");
+  return data;
+}
+
+async function completeYouTubeConnection(userId, code) {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("Account not found.");
+  const token = await exchangeYouTubeCode(code);
+  if (!token.refresh_token) throw new Error("Google did not return a refresh token. Please try connecting YouTube again.");
+  const channelResp = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", { headers: { Authorization: `Bearer ${token.access_token}` } });
+  const channelData = await channelResp.json().catch(() => ({}));
+  const channel = channelData.items?.[0];
+  if (!channelResp.ok || !channel) throw new Error(channelData.error?.message || "Could not read the connected YouTube channel. Make sure the Google account has a YouTube channel.");
+  user.connections = user.connections || {};
+  user.connections.youtube = {
+    connected: true,
+    channelId: channel.id,
+    channelTitle: channel.snippet?.title || "YouTube channel",
+    accessTokenEncrypted: encryptToken(token.access_token),
+    refreshTokenEncrypted: encryptToken(token.refresh_token),
+    tokenExpiresAt: token.expires_in ? new Date(Date.now() + Number(token.expires_in) * 1000) : null
+  };
+  user.socials = { ...user.socials, youtube: true };
+  await saveUser(user);
+  return { name: channel.snippet?.title || "YouTube" };
+}
+
+app.get("/api/connections/youtube/callback", async (req, res) => {
+  const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+  const pending = state ? consumeOAuthState(String(state)) : null;
+  const redirectToDashboard = (status, reason, message) => {
+    const params = new URLSearchParams({ connect: status });
+    if (reason) params.set("reason", reason);
+    if (message) params.set("message", String(message).slice(0, 500));
+    return res.redirect(`${safeReturnTo(pending?.returnTo)}?${params.toString()}`);
+  };
+  try {
+    if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
+    if (!code || !pending || pending.platform !== "youtube") return redirectToDashboard("error", "session-expired");
+    const result = await completeYouTubeConnection(pending.userId, String(code));
+    return redirectToDashboard("youtube-success", null, `${result.name} connected.`);
+  } catch (error) {
+    console.error("YouTube OAuth callback error:", error.message);
+    return redirectToDashboard("error", "unexpected", error.message || "YouTube returned an unexpected error while connecting your account.");
+  }
+});
+
+async function getYouTubeAccessToken(user) {
+  const conn = user?.connections?.youtube;
+  if (!conn?.connected || !conn.refreshTokenEncrypted) throw new Error("Connect YouTube before publishing.");
+  if (conn.accessTokenEncrypted && conn.tokenExpiresAt && new Date(conn.tokenExpiresAt).getTime() > Date.now() + 60 * 1000) {
+    return { token: decryptToken(conn.accessTokenEncrypted) };
+  }
+  const refreshToken = decryptToken(conn.refreshTokenEncrypted);
+  const body = new URLSearchParams({ refresh_token: refreshToken, grant_type: "refresh_token", client_id: YOUTUBE_CLIENT_ID, client_secret: YOUTUBE_CLIENT_SECRET });
+  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || "YouTube session expired. Please reconnect YouTube.");
+  conn.accessTokenEncrypted = encryptToken(data.access_token);
+  conn.tokenExpiresAt = data.expires_in ? new Date(Date.now() + Number(data.expires_in) * 1000) : null;
+  await saveUser(user);
+  return { token: data.access_token };
+}
+
+// YouTube requires a title distinct from the description. Creovah's composer only has one body
+// field, so the title is derived from the first line of the caption (falling back to a generic
+// title), and the full caption is kept as the description so nothing the user wrote is dropped.
+function deriveYouTubeTitle(body) {
+  const firstLine = String(body || "").split("\n")[0].trim();
+  if (!firstLine) return "Untitled video";
+  return firstLine.length > 100 ? firstLine.slice(0, 97) + "..." : firstLine;
+}
+
+async function publishYouTubeContent(user, item) {
+  const assets = Array.isArray(item.mediaAssets) ? item.mediaAssets : [];
+  const video = assets.find(a => String(a?.mimeType || "").startsWith("video/") || a?.resourceType === "video");
+  if (!video) throw new Error("YouTube requires a video. Add a video before publishing.");
+  const file = await fetchAssetBuffer(video);
+  if (!file.mimeType.startsWith("video/")) throw new Error("YouTube requires a video file.");
+  if (file.size > 128 * 1024 * 1024 * 1024) throw new Error("YouTube videos must be 128 GB or smaller.");
+  const { token } = await getYouTubeAccessToken(user);
+  const metadata = {
+    snippet: {
+      title: deriveYouTubeTitle(item.body),
+      description: item.body || "",
+      categoryId: "22"
+    },
+    status: { privacyStatus: "public", selfDeclaredMadeForKids: false }
+  };
+  const initResp = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+      "X-Upload-Content-Type": file.mimeType,
+      "X-Upload-Content-Length": String(file.size)
+    },
+    body: JSON.stringify(metadata)
+  });
+  if (!initResp.ok) {
+    const errData = await initResp.json().catch(() => ({}));
+    throw new Error(errData.error?.message || `YouTube upload could not be initialized (${initResp.status}).`);
+  }
+  const uploadUrl = initResp.headers.get("location");
+  if (!uploadUrl) throw new Error("YouTube did not return an upload session URL.");
+  const uploadResp = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.mimeType, "Content-Length": String(file.size) },
+    body: file.buffer
+  });
+  const uploadData = await uploadResp.json().catch(() => ({}));
+  if (!uploadResp.ok || !uploadData.id) throw new Error(uploadData.error?.message || `YouTube video upload failed (${uploadResp.status}).`);
+  return uploadData.id;
+}
+
 // --- TikTok Login Kit + Content Posting API ---
 const TIKTOK_CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
 const TIKTOK_CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET;
@@ -1166,7 +1369,7 @@ async function tiktokJsonFetch(url, options = {}) {
 app.get("/api/connections/tiktok/start", auth, (req, res) => {
   try {
     if (!TIKTOK_CLIENT_KEY || !TIKTOK_CLIENT_SECRET) return res.status(500).json({ message: "TikTok connection is not configured on the server yet." });
-    const state = createOAuthState(req.auth.id, "tiktok");
+    const state = createOAuthState(req.auth.id, "tiktok", { returnTo: req.query.returnTo });
     const params = new URLSearchParams({
       client_key: TIKTOK_CLIENT_KEY,
       response_type: "code",
@@ -1336,15 +1539,15 @@ app.post("/api/tiktok/publish", auth, async (req,res)=>{
 });
 
 app.get("/api/connections/tiktok/callback", async (req, res) => {
+  const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+  const pending = state ? consumeOAuthState(String(state)) : null;
   const redirectToDashboard = (status, reason, message) => {
     const params = new URLSearchParams({ connect: status });
     if (reason) params.set("reason", reason);
     if (message) params.set("message", String(message).slice(0, 500));
-    return res.redirect(`/dashboard.html?${params.toString()}`);
+    return res.redirect(`${safeReturnTo(pending?.returnTo)}?${params.toString()}`);
   };
   try {
-    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
-    const pending = state ? consumeOAuthState(String(state)) : null;
     if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
     if (!code || !pending || pending.platform !== "tiktok") return redirectToDashboard("error", "session-expired");
     const result = await completeTikTokConnection(pending.userId, String(code));
@@ -1369,6 +1572,11 @@ const FB_GRAPH_VERSION = "v21.0";
 // Short-lived, in-memory map of OAuth state -> user/platform. State expires in
 // 10 minutes and is consumed once, preventing a callback from being replayed.
 const pendingOAuthStates = new Map();
+// Only two known post-connection destinations are ever allowed — never a value built from
+// arbitrary user input — so this can't be used to redirect anywhere off the app.
+function safeReturnTo(value) {
+  return value === "onboarding" ? "/onboarding/index.html" : "/dashboard.html";
+}
 function createOAuthState(userId, platform, extra = {}) {
   const state = crypto.randomBytes(16).toString("hex");
   pendingOAuthStates.set(state, {
@@ -1404,7 +1612,7 @@ app.get("/api/connections/facebook/start", auth, (req, res) => {
     if (!FB_APP_ID || !FB_APP_SECRET || !FB_CONFIG_ID) {
       return res.status(500).json({ message: "Facebook connection is not configured on the server yet." });
     }
-    const state = createOAuthState(req.auth.id, "facebook");
+    const state = createOAuthState(req.auth.id, "facebook", { returnTo: req.query.returnTo });
     res.json({ url: buildMetaOAuthUrl(FB_CONFIG_ID, state) });
   } catch (error) {
     console.error("Facebook OAuth start error:", error);
@@ -1418,7 +1626,7 @@ app.get("/api/connections/instagram/start", auth, (req, res) => {
     if (!FB_APP_ID || !FB_APP_SECRET || !INSTAGRAM_CONFIG_ID) {
       return res.status(500).json({ message: "Instagram connection is not configured on the server yet." });
     }
-    const state = createOAuthState(req.auth.id, "instagram");
+    const state = createOAuthState(req.auth.id, "instagram", { returnTo: req.query.returnTo });
     res.json({ url: buildMetaOAuthUrl(INSTAGRAM_CONFIG_ID, state) });
   } catch (error) {
     console.error("Instagram OAuth start error:", error);
@@ -1530,16 +1738,16 @@ async function completeInstagramConnection(userId, code) {
 // one canonical Facebook OAuth path and one state/callback implementation.
 
 app.get("/api/connections/facebook/callback", async (req, res) => {
+  const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
+  const pending = state ? consumeOAuthState(String(state)) : null;
   const redirectToDashboard = (status, reason, message) => {
     const params = new URLSearchParams({ connect: status });
     if (reason) params.set("reason", reason);
     if (message) params.set("message", String(message).slice(0, 500));
-    return res.redirect(`/dashboard.html?${params.toString()}`);
+    return res.redirect(`${safeReturnTo(pending?.returnTo)}?${params.toString()}`);
   };
 
   try {
-    const { code, state, error: oauthError, error_description: oauthDescription } = req.query;
-    const pending = state ? consumeOAuthState(String(state)) : null;
     if (oauthError) return redirectToDashboard("error", "denied", oauthDescription || oauthError);
     if (!code || !pending) return redirectToDashboard("error", "session-expired");
 
@@ -1561,7 +1769,7 @@ app.get("/api/connections/facebook/callback", async (req, res) => {
 app.post("/api/connections/:platform/disconnect", auth, async (req, res) => {
   try {
     const platform = req.params.platform;
-    if (!["instagram", "facebook", "linkedin", "x", "tiktok"].includes(platform)) return res.status(400).json({ message: "Unknown platform." });
+    if (!["instagram", "facebook", "linkedin", "x", "tiktok", "youtube"].includes(platform)) return res.status(400).json({ message: "Unknown platform." });
     const user = await findUserById(req.auth.id);
     if (!user) return res.status(404).json({ message: "Account not found." });
 
