@@ -126,6 +126,10 @@ const contentSchema = new mongoose.Schema({
   mediaType: { type: String, default: "" },
   mediaAltText: { type: String, default: "", maxlength: 300 },
   mediaAssets: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  // Optional per-platform content overrides, e.g. { linkedin: { body: "..." }, tiktok: { mediaAssets: [...] } }.
+  // A platform key is only present if the user chose to customize that platform; only the fields
+  // they opted into (body and/or mediaAssets) are present. Anything absent falls back to the shared body/mediaAssets above.
+  perPlatformOverrides: { type: mongoose.Schema.Types.Mixed, default: undefined },
   // TikTok-only posting settings (privacy level, comments/duet/stitch, branded/AI content disclosure).
   // Not applicable to and never used by any other platform.
   tiktokSettings: { type: mongoose.Schema.Types.Mixed, default: undefined },
@@ -390,14 +394,15 @@ const PLATFORM_RULES = {
   facebook: { name: "Facebook", maxText: 63206, maxImages: 10, maxVideos: 1, mediaRequired: false },
   tiktok: { name: "TikTok", maxText: 4000, maxImages: 35, maxVideos: 1, mediaRequired: true }
 };
-function validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings }) {
+function validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings, perPlatformOverrides }) {
   const errors = [];
-  const text = String(body || "");
-  const assets = Array.isArray(mediaAssets) ? mediaAssets : [];
-  const images = assets.filter(a => String(a?.mimeType || "").startsWith("image/") || String(a?.resourceType || "") === "image");
-  const videos = assets.filter(a => String(a?.mimeType || "").startsWith("video/") || String(a?.resourceType || "") === "video");
   for (const platform of platforms) {
     const rule = PLATFORM_RULES[platform]; if (!rule) continue;
+    const override = perPlatformOverrides && perPlatformOverrides[platform];
+    const text = String((override && override.body !== undefined ? override.body : body) || "");
+    const assets = Array.isArray(override && override.mediaAssets !== undefined ? override.mediaAssets : mediaAssets) ? (override && override.mediaAssets !== undefined ? override.mediaAssets : mediaAssets) : [];
+    const images = assets.filter(a => String(a?.mimeType || "").startsWith("image/") || String(a?.resourceType || "") === "image");
+    const videos = assets.filter(a => String(a?.mimeType || "").startsWith("video/") || String(a?.resourceType || "") === "video");
     if (text.length > rule.maxText) errors.push({ platform, message: `${rule.name} allows up to ${rule.maxText.toLocaleString()} characters. Your post has ${text.length.toLocaleString()}.` });
     if (rule.mediaRequired && !assets.length) errors.push({ platform, message: `${rule.name} requires a photo or video for this post.` });
     if (images.length > rule.maxImages) errors.push({ platform, message: `${rule.name} allows up to ${rule.maxImages} photo${rule.maxImages === 1 ? "" : "s"} in one post.` });
@@ -510,6 +515,22 @@ app.post("/api/content", auth, async (req, res) => {
     if (!validateMediaAssetsOwnership(mediaAssets, req.auth.id)) return res.status(400).json({ message: "One or more media files are not valid Creovah media." });
     if (!body) return res.status(400).json({ message: "Write something for your post." });
     if (!platforms.length) return res.status(400).json({ message: "Choose at least one platform." });
+    // Optional per-platform overrides: a platform gets its own body and/or media instead of the shared
+    // content above. Only platforms actually selected for this post, and only fields the client sent,
+    // are kept; anything else falls back to the shared body/mediaAssets at publish time.
+    const rawOverrides = req.body.perPlatformOverrides && typeof req.body.perPlatformOverrides === "object" ? req.body.perPlatformOverrides : {};
+    const perPlatformOverrides = {};
+    for (const platform of Object.keys(rawOverrides)) {
+      if (!platforms.includes(platform)) continue;
+      const raw = rawOverrides[platform]; if (!raw || typeof raw !== "object") continue;
+      const entry = {};
+      if (typeof raw.body === "string") entry.body = raw.body.trim();
+      if (Array.isArray(raw.mediaAssets)) {
+        if (!validateMediaAssetsOwnership(raw.mediaAssets, req.auth.id)) return res.status(400).json({ message: `One or more custom media files for ${platform} are not valid Creovah media.` });
+        entry.mediaAssets = raw.mediaAssets;
+      }
+      if (Object.keys(entry).length) perPlatformOverrides[platform] = entry;
+    }
     // TikTok-only posting settings (privacy, comments/duet/stitch, branded/AI content disclosure).
     // Ignored for every other platform; only ever applied when tiktok is a selected platform.
     const rawTiktokSettings = req.body.tiktokSettings && typeof req.body.tiktokSettings === "object" ? req.body.tiktokSettings : {};
@@ -535,21 +556,23 @@ app.post("/api/content", auth, async (req, res) => {
       if (platform === "tiktok" && !user.connections?.tiktok?.connected) return res.status(400).json({ message: "Connect TikTok before publishing or scheduling TikTok content." });
     }
     if (action !== "draft") {
-      const errors = validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings });
+      const errors = validateContentForPlatforms({ platforms, body, mediaAssets, action, tiktokSettings, perPlatformOverrides });
       if (errors.length) return res.status(422).json({ message: "Fix the platform requirements before continuing.", errors });
     }
     const item = await Content.create({
       userId: req.auth.id, title: "", body, platforms, status: requestedStatus, scheduledFor,
       mediaUrl: mediaAssets[0]?.secureUrl || "", mediaUrn: "", mediaType: mediaAssets[0]?.resourceType === "video" || String(mediaAssets[0]?.mimeType || "").startsWith("video/") ? "video" : mediaAssets.length ? "image" : "",
-      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets, tiktokSettings
+      mediaAltText: String(req.body.mediaAltText || "").trim(), mediaAssets, tiktokSettings,
+      perPlatformOverrides: Object.keys(perPlatformOverrides).length ? perPlatformOverrides : undefined
     });
     if (publishNow) {
       const externalPosts = {}; const publishErrors = [];
       for (const platform of platforms) {
         try {
-          if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, item);
-          else if (platform === "x") externalPosts.x = await publishXContent(user, item);
-          else if (platform === "tiktok") externalPosts.tiktok = await publishTikTokContent(user, item);
+          const platformItem = resolvePlatformItem(item, platform);
+          if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, platformItem);
+          else if (platform === "x") externalPosts.x = await publishXContent(user, platformItem);
+          else if (platform === "tiktok") externalPosts.tiktok = await publishTikTokContent(user, platformItem);
         } catch (platformError) {
           console.error(`${platform} publish failed for ${item._id}:`, platformError);
           publishErrors.push({ platform, message: platformError.message || `Unable to publish to ${platform}.` });
@@ -858,6 +881,18 @@ async function prepareLinkedInImage(user, mediaUrl) {
   return { urn: value.image, contentType };
 }
 
+// Merges a platform's content override (if any) on top of the shared body/mediaAssets, returning a
+// lightweight view object the existing publishXContent(user, item)-style functions can consume as-is.
+function resolvePlatformItem(item, platform) {
+  const override = item.perPlatformOverrides && item.perPlatformOverrides[platform];
+  if (!override) return item;
+  return {
+    ...item.toObject ? item.toObject() : item,
+    body: override.body !== undefined ? override.body : item.body,
+    mediaAssets: override.mediaAssets !== undefined ? override.mediaAssets : item.mediaAssets
+  };
+}
+
 async function publishLinkedInContent(user, item) {
   const conn = user.connections?.linkedin;
   if (!conn?.connected || !conn.accessTokenEncrypted || !conn.memberUrn) throw new Error("LinkedIn is not connected.");
@@ -883,8 +918,9 @@ async function processSchedules() {
         const externalPosts = {}; const publishErrors = [];
         for (const platform of item.platforms) {
           try {
-            if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, item);
-            else if (platform === "x") externalPosts.x = await publishXContent(user, item);
+            const platformItem = resolvePlatformItem(item, platform);
+            if (platform === "linkedin") externalPosts.linkedin = await publishLinkedInContent(user, platformItem);
+            else if (platform === "x") externalPosts.x = await publishXContent(user, platformItem);
           } catch (platformError) { publishErrors.push({ platform, message: platformError.message || "Publishing failed." }); }
         }
         item.externalPosts = externalPosts; item.externalPostUrn = Object.values(externalPosts).find(Boolean) || "";

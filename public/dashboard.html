@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Publishing — creovah</title>
+<link rel="icon" href="/assets/favicon-256.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/creovah-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>
 :root{--bg:#f6f4f0;--surface:#fff;--ink:#171513;--muted:#817a72;--line:#e7e2db;--soft:#f0ece6;--accent:#ef6b38;--accent2:#d95626;--green:#28765e;--red:#b93b32;--shadow:0 18px 55px rgba(24,20,16,.08);--shadow-lg:0 30px 100px rgba(24,20,16,.18)}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}body{overflow-x:hidden}button,input,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh}.top{height:72px;background:rgba(255,255,255,.9);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 26px;position:sticky;top:0;z-index:30;backdrop-filter:blur(18px)}.brand{font:800 24px Fraunces;letter-spacing:-1.5px}.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}.icon-btn{width:40px;height:40px;border:1px solid var(--line);background:var(--surface);border-radius:12px;display:grid;place-items:center;color:var(--ink);transition:.2s}.icon-btn:hover{transform:translateY(-1px);border-color:#cec7bd}.menu-dropdown{position:absolute;right:22px;top:61px;width:230px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);display:none}.menu-dropdown.open{display:block;animation:pop .16s ease}.who{padding:10px 12px 13px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.menu-dropdown a,.menu-dropdown button{width:100%;border:0;background:none;padding:11px 12px;border-radius:10px;display:flex;align-items:center;gap:10px;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}.menu-dropdown a:hover,.menu-dropdown button:hover{background:var(--bg)}.signout{color:var(--red)!important}
-.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1440px;margin:auto}.sidebar{border-right:1px solid var(--line);min-height:calc(100vh - 72px);padding:24px 14px;position:sticky;top:72px;height:calc(100vh - 72px);background:#f8f6f2}.side-label{text-transform:uppercase;font-size:9px;letter-spacing:1.5px;font-weight:800;color:#a29a91;padding:0 12px;margin:8px 0 9px}.nav{display:grid;gap:4px}.nav a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;color:#625c55;text-decoration:none;font-size:13px;font-weight:700}.nav a:hover{background:#eeeae4;color:var(--ink)}.nav a.active{background:#1b1815;color:#fff}.nav i{width:17px}.side-bottom{position:absolute;left:14px;right:14px;bottom:18px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff}.side-bottom small{display:block;color:var(--muted);font-size:10px;margin-bottom:8px}.side-bottom strong{font-size:12px}.main{padding:38px clamp(18px,4vw,52px) 70px;min-width:0}.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:27px}.eyebrow{text-transform:uppercase;letter-spacing:1.6px;font-size:9px;font-weight:800;color:var(--accent)}h1{font:800 clamp(34px,4vw,50px) Fraunces;letter-spacing:-2.6px;margin:9px 0 0}.hero-copy{color:var(--muted);font-size:13px;margin-top:8px}.hero-actions{display:flex;gap:8px;flex:none}.primary{border:0;background:var(--ink);color:#fff;border-radius:10px;padding:10px 13px;display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12px;box-shadow:0 9px 20px rgba(23,21,19,.12);transition:.2s}.primary:hover{transform:translateY(-2px);background:#2a2521}.primary.orange{background:var(--accent)}.primary.orange:hover{background:var(--accent2)}
-.overview{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px}.stat{background:var(--surface);border:1px solid var(--line);border-radius:17px;padding:19px;min-height:116px;position:relative;overflow:hidden}.stat.main-stat{background:#1c1917;color:#fff;border-color:#1c1917}.stat.main-stat:after{content:"";position:absolute;width:130px;height:130px;border-radius:50%;right:-50px;top:-55px;border:1px solid rgba(255,255,255,.12)}.stat-label{font-size:10px;color:var(--muted);font-weight:700}.main-stat .stat-label{color:#aaa39c}.stat-value{font:700 34px Fraunces;letter-spacing:-1px;margin-top:10px}.stat-foot{font-size:10px;margin-top:4px;color:var(--muted)}.main-stat .stat-foot{color:#a9a19a}
-.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.8fr);gap:18px}.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 30px rgba(20,18,15,.025);min-width:0}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}.panel-title{font:600 19px Fraunces}.panel-sub{font-size:10px;color:var(--muted);margin-top:3px}.ghost{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 10px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:6px}.content-list{padding:7px}.content-item{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:13px;align-items:center;padding:13px;border-radius:13px;transition:.18s}.content-item:hover{background:#faf8f5}.content-thumb{width:54px;height:54px;border-radius:12px;background:#ece7df;display:grid;place-items:center;overflow:hidden}.content-thumb img{width:100%;height:100%;object-fit:cover}.content-thumb i{color:#958d84}.content-title{font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-body{font-size:11px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}.pill{font-size:9px;font-weight:700;padding:5px 7px;border-radius:99px;background:var(--soft);color:#655e57}.pill.published{background:#e7f2ed;color:var(--green)}.pill.scheduled{background:#fff0df;color:#9b5c13}.pill.draft{background:#eeeef0;color:#65646a}.content-actions{display:flex;align-items:center;gap:6px}.delete-btn{width:32px;height:32px;border:0;border-radius:9px;background:#f5f0ea;color:#6e675f;display:grid;place-items:center}.delete-btn:hover{background:#fbe8e5;color:var(--red)}.empty{padding:55px 20px;text-align:center;color:var(--muted)}.empty-icon{width:46px;height:46px;margin:0 auto 12px;border:1px solid var(--line);border-radius:14px;display:grid;place-items:center;background:#faf8f5}.empty p{font-size:12px}
-.side-panel{display:grid;gap:18px}.quick-card{padding:20px;background:linear-gradient(145deg,#fff,#f6f0e8);border:1px solid var(--line);border-radius:18px}.quick-card h3{font:600 22px Fraunces;margin:0}.quick-card p{font-size:11px;line-height:1.6;color:var(--muted);margin:8px 0 18px}.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick-action{border:1px solid var(--line);background:#fff;border-radius:11px;padding:12px 10px;text-align:left;font-size:11px;font-weight:800;display:flex;align-items:center;gap:8px}.quick-action:hover{border-color:#c9c1b8;transform:translateY(-1px)}.platform-list{padding:4px 16px 13px}.platform-row{display:flex;align-items:center;gap:11px;padding:12px 4px;border-bottom:1px solid #f0ece7}.platform-row:last-child{border-bottom:0}.platform-logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff}.platform-logo.linkedin{background:#0a66c2}.platform-logo.facebook{background:#1877f2}.platform-logo.instagram{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.platform-logo.tiktok{background:#111}.platform-logo.x{background:#111}.platform-row strong{font-size:12px}.platform-row small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.connected-dot{margin-left:auto;width:7px;height:7px;background:#2c9a72;border-radius:50%;box-shadow:0 0 0 4px #e5f4ee}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}body{overflow-x:hidden}button,input,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh}.top{height:72px;background:rgba(255,255,255,.9);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 26px;position:sticky;top:0;z-index:30;backdrop-filter:blur(18px)}.brand{font:800 24px Fraunces;letter-spacing:-1.5px;display:flex;align-items:center;gap:9px}.brand-mark{width:32px;height:32px;border-radius:9px;display:block;filter:drop-shadow(0 6px 14px rgba(239,107,56,.35))}.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}.icon-btn{width:40px;height:40px;border:1px solid var(--line);background:var(--surface);border-radius:12px;display:grid;place-items:center;color:var(--ink);transition:.2s;box-shadow:0 2px 5px rgba(20,18,15,.05)}.icon-btn:hover{transform:translateY(-1px);border-color:#cec7bd;box-shadow:0 6px 14px rgba(20,18,15,.1)}.menu-dropdown{position:absolute;right:22px;top:61px;width:230px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);display:none}.menu-dropdown.open{display:block;animation:pop .16s ease}.who{padding:10px 12px 13px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.menu-dropdown a,.menu-dropdown button{width:100%;border:0;background:none;padding:11px 12px;border-radius:10px;display:flex;align-items:center;gap:10px;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}.menu-dropdown a:hover,.menu-dropdown button:hover{background:var(--bg)}.signout{color:var(--red)!important}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1440px;margin:auto}.sidebar{border-right:1px solid var(--line);min-height:calc(100vh - 72px);padding:24px 14px;position:sticky;top:72px;height:calc(100vh - 72px);background:#f8f6f2}.side-label{text-transform:uppercase;font-size:9px;letter-spacing:1.5px;font-weight:800;color:#a29a91;padding:0 12px;margin:8px 0 9px}.nav{display:grid;gap:4px}.nav a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;color:#625c55;text-decoration:none;font-size:13px;font-weight:700}.nav a:hover{background:#eeeae4;color:var(--ink)}.nav a.active{background:#1b1815;color:#fff;box-shadow:0 6px 16px rgba(27,24,21,.25)}.nav i{width:17px}.side-bottom{position:absolute;left:14px;right:14px;bottom:18px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 8px 22px rgba(20,18,15,.08)}.side-bottom small{display:block;color:var(--muted);font-size:10px;margin-bottom:8px}.side-bottom strong{font-size:12px}.main{padding:38px clamp(18px,4vw,52px) 70px;min-width:0}.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:27px}.eyebrow{text-transform:uppercase;letter-spacing:1.6px;font-size:9px;font-weight:800;color:var(--accent)}h1{font:800 clamp(34px,4vw,50px) Fraunces;letter-spacing:-2.6px;margin:9px 0 0}.hero-copy{color:var(--muted);font-size:13px;margin-top:8px}.hero-actions{display:flex;gap:8px;flex:none;flex-wrap:wrap;justify-content:flex-end}.primary{border:0;background:var(--ink);color:#fff;border-radius:10px;padding:10px 13px;display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12px;box-shadow:0 9px 20px rgba(23,21,19,.12);transition:.2s}.primary:hover{transform:translateY(-2px);background:#2a2521}.primary.orange{background:var(--accent)}.primary.orange:hover{background:var(--accent2)}
+.overview{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px}.stat{background:var(--surface);border:1px solid var(--line);border-radius:17px;padding:19px;min-height:116px;position:relative;overflow:hidden;box-shadow:0 2px 4px rgba(24,20,16,.03),0 14px 30px -10px rgba(24,20,16,.14);transition:transform .2s ease,box-shadow .2s ease}.stat:hover{transform:translateY(-3px);box-shadow:0 4px 8px rgba(24,20,16,.05),0 22px 44px -12px rgba(24,20,16,.2)}.stat.main-stat{background:#1c1917;color:#fff;border-color:#1c1917;box-shadow:0 2px 4px rgba(24,20,16,.1),0 20px 40px -10px rgba(24,20,16,.4)}.stat.main-stat:after{content:"";position:absolute;width:130px;height:130px;border-radius:50%;right:-50px;top:-55px;border:1px solid rgba(255,255,255,.12)}.stat-label{font-size:10px;color:var(--muted);font-weight:700}.main-stat .stat-label{color:#aaa39c}.stat-value{font:700 34px Fraunces;letter-spacing:-1px;margin-top:10px}.stat-foot{font-size:10px;margin-top:4px;color:var(--muted)}.main-stat .stat-foot{color:#a9a19a}
+.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.8fr);gap:18px}.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 2px 4px rgba(20,18,15,.03),0 16px 36px -12px rgba(20,18,15,.12);min-width:0}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}.panel-title{font:600 19px Fraunces}.panel-sub{font-size:10px;color:var(--muted);margin-top:3px}.ghost{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 10px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(20,18,15,.05);transition:.16s}.ghost:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(20,18,15,.09)}.content-list{padding:7px}.content-item{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:13px;align-items:center;padding:13px;border-radius:13px;transition:.18s}.content-item:hover{background:#faf8f5;box-shadow:0 6px 18px rgba(20,18,15,.06)}.content-thumb{width:54px;height:54px;border-radius:12px;background:#ece7df;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(20,18,15,.04)}.content-thumb img{width:100%;height:100%;object-fit:cover}.content-thumb i{color:#958d84}.content-title{font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-body{font-size:11px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}.pill{font-size:9px;font-weight:700;padding:5px 7px;border-radius:99px;background:var(--soft);color:#655e57}.pill.published{background:#e7f2ed;color:var(--green)}.pill.scheduled{background:#fff0df;color:#9b5c13}.pill.draft{background:#eeeef0;color:#65646a}.content-actions{display:flex;align-items:center;gap:6px}.delete-btn{width:32px;height:32px;border:0;border-radius:9px;background:#f5f0ea;color:#6e675f;display:grid;place-items:center;box-shadow:0 2px 5px rgba(20,18,15,.05)}.delete-btn:hover{background:#fbe8e5;color:var(--red);box-shadow:0 4px 10px rgba(185,59,50,.15)}.empty{padding:55px 20px;text-align:center;color:var(--muted)}.empty-icon{width:46px;height:46px;margin:0 auto 12px;border:1px solid var(--line);border-radius:14px;display:grid;place-items:center;background:#faf8f5;box-shadow:0 6px 16px rgba(20,18,15,.06)}.empty p{font-size:12px}
+.side-panel{display:grid;gap:18px}.quick-card{padding:20px;background:linear-gradient(145deg,#fff,#f6f0e8);border:1px solid var(--line);border-radius:18px;box-shadow:0 2px 4px rgba(20,18,15,.03),0 16px 34px -12px rgba(20,18,15,.14)}.quick-card h3{font:600 22px Fraunces;margin:0}.quick-card p{font-size:11px;line-height:1.6;color:var(--muted);margin:8px 0 18px}.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick-action{border:1px solid var(--line);background:#fff;border-radius:11px;padding:12px 10px;text-align:left;font-size:11px;font-weight:800;display:flex;align-items:center;gap:8px;box-shadow:0 3px 8px rgba(20,18,15,.05);transition:.16s}.quick-action:hover{border-color:#c9c1b8;transform:translateY(-2px);box-shadow:0 10px 20px rgba(20,18,15,.1)}.platform-list{padding:4px 16px 13px}.platform-row{display:flex;align-items:center;gap:11px;padding:12px 4px;border-bottom:1px solid #f0ece7}.platform-row:last-child{border-bottom:0}.platform-logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;box-shadow:0 5px 12px rgba(20,18,15,.16)}.platform-logo.linkedin{background:#0a66c2}.platform-logo.facebook{background:#1877f2}.platform-logo.instagram{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.platform-logo.tiktok{background:#111}.platform-logo.x{background:#111}.platform-row strong{font-size:12px}.platform-row small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.connected-dot{margin-left:auto;width:7px;height:7px;background:#2c9a72;border-radius:50%;box-shadow:0 0 0 4px #e5f4ee}
 /* composer */
 .modal{position:fixed;inset:0;background:rgba(23,20,17,.6);display:none;align-items:flex-start;justify-content:center;padding:22px 16px;overflow-y:auto;overscroll-behavior:contain;z-index:100;backdrop-filter:blur(14px)}.modal.open{display:flex;animation:fade .18s ease}
 .composer{width:min(1040px,100%);height:min(760px,calc(100dvh - 44px));max-height:calc(100dvh - 44px);background:var(--surface);border:1px solid rgba(255,255,255,.4);border-radius:26px;box-shadow:0 40px 110px rgba(18,15,12,.28);overflow:hidden;display:flex;flex-direction:column;animation:slideUp .24s cubic-bezier(.2,.8,.3,1)}
@@ -26,6 +28,43 @@
 .composer.flavor-publish .composer-mark{background:linear-gradient(150deg,var(--accent),var(--accent2))}
 .composer.flavor-publish .c-step.active{border-bottom-color:var(--accent)}
 .composer.flavor-publish .c-step.active .c-step-dot{background:var(--accent)}
+.composer.flavor-customize .composer-mark{background:linear-gradient(150deg,#5b4fff,#3f35c9)}
+.composer.flavor-customize .c-step.active{border-bottom-color:#5b4fff}
+.composer.flavor-customize .c-step.active .c-step-dot{background:#5b4fff}
+
+.customize-list{display:flex;flex-direction:column;gap:10px}
+.customize-row{border:1.5px solid var(--line);border-radius:15px;background:#fff;padding:13px 14px;transition:.16s;box-shadow:0 2px 6px rgba(20,18,15,.04)}
+.customize-row.on{border-color:#c9c3ff;background:#f8f7ff}
+.customize-row-head{display:flex;align-items:center;gap:11px}
+.customize-row-head .p-icon{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none}
+.customize-row-head .p-icon.linkedin{background:#0a66c2}.customize-row-head .p-icon.facebook{background:#1877f2}.customize-row-head .p-icon.instagram{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.customize-row-head .p-icon.tiktok{background:#111}.customize-row-head .p-icon.x{background:#111}
+.customize-row-head strong{font-size:12.5px;flex:1}
+.switch{position:relative;width:38px;height:22px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.switch-track{position:absolute;inset:0;background:#e2ddd4;border-radius:99px;transition:.16s}
+.switch-track:before{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.16s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch input:checked+.switch-track{background:#5b4fff}
+.switch input:checked+.switch-track:before{transform:translateX(16px)}
+.customize-options{display:none;gap:7px;margin-top:11px;padding-top:11px;border-top:1px dashed #e3ddd3}
+.customize-row.on .customize-options{display:flex}
+.customize-opt{flex:1;text-align:center;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 6px;font-size:10.5px;font-weight:800;color:var(--muted);transition:.14s}
+.customize-opt.on{border-color:#5b4fff;background:#5b4fff;color:#fff}
+.customize-empty{border:1.5px dashed #d3ccc3;background:#fbf9f6;color:var(--muted);padding:16px;border-radius:14px;font-size:11.5px;text-align:center}
+
+.override-card{border:1.5px solid var(--line);border-radius:16px;padding:15px;margin-bottom:14px;background:#fbfaff;box-shadow:0 4px 14px rgba(91,79,255,.06)}
+.override-card:last-child{margin-bottom:0}
+.override-card-head{display:flex;align-items:center;gap:9px;margin-bottom:13px}
+.override-card-head .p-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;flex:none}
+.override-card-head .p-icon.linkedin{background:#0a66c2}.override-card-head .p-icon.facebook{background:#1877f2}.override-card-head .p-icon.instagram{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.override-card-head .p-icon.tiktok{background:#111}.override-card-head .p-icon.x{background:#111}
+.override-card-head strong{font-size:12.5px}
+.override-card textarea{width:100%;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px;outline:none;font-size:12.5px;line-height:1.55;height:110px;resize:vertical}
+.override-card textarea:focus{border-color:#b7b0ff;box-shadow:0 0 0 4px rgba(91,79,255,.09)}
+.override-upload{border:1.5px dashed #cbc3b9;background:#fff;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:11px;color:var(--muted)}
+.override-upload:hover{border-color:#b7b0ff}
+.override-media-preview{margin-top:9px;position:relative;border-radius:11px;overflow:hidden;background:#151311;display:none}
+.override-media-preview.show{display:block}
+.override-media-preview img,.override-media-preview video{width:100%;max-height:180px;display:block;object-fit:contain;background:#151311}
+.override-media-preview .remove-media{width:28px;height:28px}
 .composer-heading h2{font:700 21px Fraunces;margin:0;letter-spacing:-.4px}
 .composer-heading p{font-size:11px;color:var(--muted);margin:2px 0 0}
 .composer-steps{display:flex;gap:6px;padding-bottom:16px}
@@ -55,7 +94,7 @@
 .counter{text-align:right;color:var(--muted);font-size:9.5px;margin-top:6px}
 
 .platform-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
-.platform-card{position:relative;border:1.5px solid var(--line);background:#fff;border-radius:15px;padding:13px 12px;display:flex;flex-direction:column;gap:9px;text-align:left;transition:.16s;overflow:hidden}
+.platform-card{position:relative;border:1.5px solid var(--line);background:#fff;border-radius:15px;padding:13px 12px;display:flex;flex-direction:column;gap:9px;text-align:left;transition:.16s;overflow:hidden;box-shadow:0 2px 6px rgba(20,18,15,.04)}
 .platform-card:hover{transform:translateY(-2px);border-color:#d8cfc3;box-shadow:0 10px 22px rgba(20,18,15,.06)}
 .platform-card .p-icon{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none}
 .platform-card .p-icon.linkedin{background:#0a66c2}.platform-card .p-icon.facebook{background:#1877f2}.platform-card .p-icon.instagram{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.platform-card .p-icon.tiktok{background:#111}.platform-card .p-icon.x{background:#111}
@@ -81,7 +120,7 @@
 .upload-progress span{height:100%;display:block;width:0;background:var(--accent);transition:width .35s ease}
 .alt-note{font-size:10px;color:var(--muted);margin-top:7px;line-height:1.5}
 
-.tiktok-card{border:1.5px solid #ffe0cc;border-radius:16px;padding:16px;background:linear-gradient(150deg,#fff8f3,#fffcfa);margin-bottom:20px}
+.tiktok-card{border:1.5px solid #ffe0cc;border-radius:16px;padding:16px;background:linear-gradient(150deg,#fff8f3,#fffcfa);margin-bottom:20px;box-shadow:0 4px 14px rgba(240,82,27,.06)}
 .tiktok-card-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}
 .tiktok-card-head .tt-badge{width:26px;height:26px;border-radius:8px;background:#111;color:#fff;display:grid;place-items:center;flex:none}
 .tiktok-card-head strong{font-size:12.5px}
@@ -99,7 +138,7 @@
 .schedule-row.show{display:grid}
 .schedule-row label{font-size:10.5px;font-weight:800;display:block;margin-bottom:7px}
 
-.review-summary{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1.5px solid var(--line);border-radius:14px;background:#faf8f5;margin-bottom:20px;font-size:12px}
+.review-summary{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1.5px solid var(--line);border-radius:14px;background:#faf8f5;margin-bottom:20px;font-size:12px;box-shadow:0 4px 14px rgba(20,18,15,.05)}
 .review-summary .rs-icon{width:34px;height:34px;border-radius:10px;background:var(--soft);color:var(--accent);display:grid;place-items:center;flex:none}
 .review-summary b{font-weight:800}
 .review-summary .rs-sep{color:#c7bfb4}
@@ -152,8 +191,8 @@
 .form-error{color:var(--red);font-size:10.5px;min-height:14px;white-space:pre-line}
 .foot-actions{display:flex;gap:8px}
 .foot-nav{display:flex;gap:8px}
-.secondary{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;padding:10px 14px;font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:7px;transition:.16s}
-.secondary:hover{background:var(--bg);border-color:#d8cfc3}
+.secondary{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;padding:10px 14px;font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:7px;transition:.16s;box-shadow:0 2px 6px rgba(20,18,15,.05)}
+.secondary:hover{background:var(--bg);border-color:#d8cfc3;transform:translateY(-1px);box-shadow:0 6px 14px rgba(20,18,15,.09)}
 .secondary:disabled{opacity:.4;cursor:not-allowed}
 .danger{color:var(--red)}
 /* notice */
@@ -166,8 +205,7 @@
 body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparent 28%),radial-gradient(circle at 92% 8%,rgba(91,79,255,.055),transparent 24%),var(--bg)}
 .top{background:rgba(255,255,255,.86);backdrop-filter:blur(18px);border-bottom:1px solid rgba(233,226,217,.8)}
 .hero{padding:28px 0 22px}.hero h1{letter-spacing:-.035em;font-size:32px}.hero p{max-width:620px}
-.stat-grid{gap:12px}.stat{border-radius:18px;padding:18px;background:linear-gradient(145deg,#fff,#fbf9f6);box-shadow:0 8px 28px rgba(20,18,15,.045);transition:transform .2s,box-shadow .2s}.stat:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(20,18,15,.08)}
-.panel{border-radius:20px;box-shadow:0 12px 40px rgba(20,18,15,.045)}
+.stat-grid{gap:12px}
 .primary.orange{background:linear-gradient(135deg,#ff6b2c,#f0521b);box-shadow:0 8px 20px rgba(240,82,27,.2)}.primary.orange:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(240,82,27,.27)}
 .notice-card{border:1px solid rgba(233,226,217,.9);box-shadow:0 30px 90px rgba(0,0,0,.2)}
 .notice-icon{box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
@@ -187,11 +225,11 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 </head>
 <body>
 <div class="app">
-<header class="top"><div class="brand">creovah</div><div class="top-right"><button class="icon-btn" id="menuBtn" aria-label="Open menu"><i data-lucide="menu"></i></button></div><div class="menu-dropdown" id="menuDropdown"><div class="who" id="menuName"></div><a href="/settings.html"><i data-lucide="settings"></i>Settings</a><a href="/privacy.html"><i data-lucide="shield"></i>Privacy Policy</a><button class="signout" id="out"><i data-lucide="log-out"></i>Sign out</button></div></header>
+<header class="top"><div class="brand"><img src="/assets/creovah-mark.png" alt="" class="brand-mark">creovah</div><div class="top-right"><button class="icon-btn" id="menuBtn" aria-label="Open menu"><i data-lucide="menu"></i></button></div><div class="menu-dropdown" id="menuDropdown"><div class="who" id="menuName"></div><a href="/settings.html"><i data-lucide="settings"></i>Settings</a><a href="/privacy.html"><i data-lucide="shield"></i>Privacy Policy</a><button class="signout" id="out"><i data-lucide="log-out"></i>Sign out</button></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">Workspace</div><nav class="nav"><a class="active" href="/dashboard.html"><i data-lucide="layout-dashboard"></i><span>Publishing</span></a><a href="/settings.html"><i data-lucide="settings"></i><span>Settings</span></a></nav><div class="side-bottom"><small>Signed in as</small><strong id="sideName">Account</strong></div></aside>
 <main class="main">
-<section class="hero"><div><div class="eyebrow">Workspace</div><h1>Publishing</h1><div class="hero-copy">Create, review and manage your social posts.</div></div><div class="hero-actions"><button class="secondary" id="scheduleModalBtn"><i data-lucide="calendar-clock"></i>Schedule</button><button class="primary orange" id="publishModalBtn"><i data-lucide="send"></i>Publish now</button></div></section>
+<section class="hero"><div><div class="eyebrow">Workspace</div><h1>Publishing</h1><div class="hero-copy">Create, review and manage your social posts.</div></div><div class="hero-actions"><button class="secondary" id="customizeModalBtn"><i data-lucide="layout-panel-top"></i>Customize per platform</button><button class="secondary" id="scheduleModalBtn"><i data-lucide="calendar-clock"></i>Schedule</button><button class="primary orange" id="publishModalBtn"><i data-lucide="send"></i>Publish now</button></div></section>
 <section class="overview"><div class="stat main-stat"><div class="stat-label">This workspace</div><div class="stat-value" id="totalCount">0</div><div class="stat-foot">posts in Creovah</div></div><div class="stat"><div class="stat-label">Published</div><div class="stat-value" id="publishedCount">0</div><div class="stat-foot">sent successfully</div></div><div class="stat"><div class="stat-label">Scheduled</div><div class="stat-value" id="scheduledCount">0</div><div class="stat-foot">waiting to publish</div></div><div class="stat"><div class="stat-label">Connected</div><div class="stat-value" id="connected">0</div><div class="stat-foot">social accounts</div></div></section>
 <div class="dashboard-grid">
 <section class="panel"><div class="panel-head"><div><div class="panel-title">Recent content</div><div class="panel-sub">Your latest posts and drafts</div></div><button class="ghost" id="refreshBtn"><i data-lucide="refresh-cw"></i>Refresh</button></div><div id="contentList" class="content-list"></div></section>
@@ -204,15 +242,11 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 <div class="modal" id="modal"><div class="composer">
 <div class="composer-head">
 <div class="composer-head-top"><div class="composer-heading"><div class="composer-mark"><i data-lucide="pen-line"></i></div><div><h2 id="composerTitle">Create post</h2><p id="composerSubtitle">Write your post, then publish it or save it for later.</p></div></div><button class="icon-btn" id="close" aria-label="Close"><i data-lucide="x"></i></button></div>
-<div class="composer-steps" id="composerSteps">
-<button type="button" class="c-step" data-step="0"><span class="c-step-dot">1</span><span class="c-step-label">Platforms</span></button>
-<button type="button" class="c-step" data-step="1"><span class="c-step-dot">2</span><span class="c-step-label">Content</span></button>
-<button type="button" class="c-step" data-step="2"><span class="c-step-dot">3</span><span class="c-step-label">Review</span></button>
-</div>
+<div class="composer-steps" id="composerSteps"></div>
 </div>
 <div class="composer-body"><section class="composer-panels" id="composerPanels">
 
-<div class="c-panel" id="cPanel0" data-panel="0">
+<div class="c-panel" id="cPanelPlatforms" data-step-key="platforms">
 <div class="c-panel-head"><h3>Where should this go?</h3><p>Choose one or more connected accounts to publish to.</p></div>
 <div class="field"><div class="platform-grid" id="platformChoices"></div></div>
 <div class="field" id="tiktokSettingsField" style="display:none">
@@ -236,14 +270,24 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 </div>
 </div>
 
-<div class="c-panel" id="cPanel1" data-panel="1">
-<div class="c-panel-head"><h3>Write your post</h3><p>Add a caption and, if you like, a photo or video.</p></div>
+<div class="c-panel" id="cPanelCustomize" data-step-key="customize">
+<div class="c-panel-head"><h3>Customize per platform</h3><p>Pick which platforms need their own content. Anything not picked uses the default content you write next.</p></div>
+<div class="field"><div id="customizeList" class="customize-list"></div></div>
+</div>
+
+<div class="c-panel" id="cPanelContent" data-step-key="content">
+<div class="c-panel-head"><h3 id="contentHeading">Write your post</h3><p id="contentSubcopy">Add a caption and, if you like, a photo or video.</p></div>
 <div class="field"><label class="field-label" for="body">Caption</label><textarea id="body" maxlength="5000" placeholder="Write something worth sharing..."></textarea><div class="counter"><span id="count">0</span> / 5000</div></div>
 <div class="field"><label class="field-label">Media <span class="field-hint">(optional)</span></label><label class="upload" for="mediaFile"><div class="upload-row"><div class="upload-icon"><i data-lucide="image-plus"></i></div><div><strong>Add a photo or video</strong><small>JPG, PNG, WEBP, GIF, MP4, MOV or WEBM · up to 200 MB</small></div></div><input id="mediaFile" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" multiple hidden></label><div class="media-preview" id="mediaPreview"><button class="remove-media" id="removeMedia" type="button" aria-label="Remove media"><i data-lucide="x"></i></button><img id="mediaImg" alt=""><video id="mediaVideo" controls playsinline></video><div id="mediaStatus" style="position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.68);color:#fff;border-radius:8px;padding:6px 8px;font-size:9px;max-width:calc(100% - 20px)"></div></div><div id="mediaEditNote" style="display:none;margin-top:10px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#f7f4ef;color:var(--muted);font-size:10px;line-height:1.5"><i data-lucide="info" style="width:13px;vertical-align:-3px;margin-right:5px"></i>Published LinkedIn media cannot be changed here. Create a new post if you want to use different media.</div><div class="upload-progress" id="uploadProgress"><span id="uploadBar"></span></div><div class="alt-note">Media is saved securely so drafts, scheduled posts and publishing can reuse it.</div></div>
 <div class="field"><label class="field-label" for="altText">Alt text <span class="field-hint">(optional)</span></label><input id="altText" type="text" maxlength="300" placeholder="Describe the image for accessibility"></div>
 </div>
 
-<div class="c-panel" id="cPanel2" data-panel="2">
+<div class="c-panel" id="cPanelOverrides" data-step-key="overrides">
+<div class="c-panel-head"><h3>Platform-specific content</h3><p>Fill in only what you chose to customize for each platform.</p></div>
+<div id="overrideEditors"></div>
+</div>
+
+<div class="c-panel" id="cPanelReview" data-step-key="review">
 <div class="c-panel-head"><h3 id="reviewHeading">Review and send</h3><p id="reviewSubcopy">Check how this looks on each platform, then send it.</p></div>
 <div class="schedule-row" id="scheduleRow"><div><label for="scheduleDate">Date</label><input id="scheduleDate" type="date"></div><div><label for="scheduleTime">Time</label><input id="scheduleTime" type="time"></div></div>
 <div class="review-summary" id="reviewSummary"></div>
@@ -254,8 +298,7 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 </div>
 </div>
 
-</section>
-</div>
+</section></div>
 <div class="upload-status" id="uploadStatus" aria-live="polite"><div class="upload-status-icon"><i data-lucide="upload-cloud"></i></div><div class="upload-status-copy"><div class="upload-status-title" id="uploadStatusTitle">Uploading media</div><div class="upload-status-message" id="uploadStatusMessage">This can take a moment. Keep this window open.</div><div class="upload-track"><span id="uploadStatusBar"></span></div></div><div class="upload-status-percent" id="uploadStatusPercent">0%</div></div>
 <div class="composer-foot">
 <div class="form-error" id="formError"></div>
@@ -275,6 +318,7 @@ body{background:radial-gradient(circle at 12% 0%,rgba(255,107,44,.07),transparen
 <script>
 const t=localStorage.getItem('creovah_token');if(!t)location.href='/auth.html';
 const $=id=>document.getElementById(id);let user=null,items=[],selectedPreviewPlatform=null,selectedFile=null,selectedFiles=[],selectedFilePreviews=[],uploadedMedia=null,editingId=null,originalAltText='',composerMode='draft',actionBusy=false;
+let customizeChoices={},overrideContent={};// customizeChoices[p]={media:bool,body:bool}; overrideContent[p]={body:'',files:[],filePreviews:[]}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function notice(title,msg,type='success'){const card=$('noticeCard');card.classList.remove('success','failure');card.classList.add(type);$('noticeTitle').textContent=title;$('noticeMessage').textContent=msg;$('noticeIcon').innerHTML=`<i data-lucide="${type==='success'?'check':'circle-alert'}"></i>`;$('noticeModal').classList.add('open');lucide.createIcons()}
 function closeNotice(){$('noticeModal').classList.remove('open')}$('noticeAction').onclick=closeNotice;
@@ -294,7 +338,7 @@ function showError(title,msg){
 function connectedPlatforms(){const a=[];if(user?.connections?.linkedin?.connected)a.push('linkedin');if(user?.connections?.facebook?.connected)a.push('facebook');if(user?.connections?.instagram?.connected)a.push('instagram');if(user?.connections?.tiktok?.connected || user?.socials?.tiktok)a.push('tiktok');if(user?.connections?.x?.connected)a.push('x');return a}
 function logo(p){return `<i data-lucide="${p==='tiktok'?'music-2':p}"></i>`}
 function updateStats(){$('totalCount').textContent=items.length;$('connected').textContent=connectedPlatforms().length;$('scheduledCount').textContent=items.filter(x=>x.status==='scheduled').length;$('publishedCount').textContent=items.filter(x=>x.status==='published').length}
-function renderPlatforms(){const list=connectedPlatforms();$('platformChoices').innerHTML=list.length?list.map(p=>`<button type="button" class="platform-card" data-platform="${p}"><div class="p-icon ${p}">${logo(p)}</div><span class="p-name">${p[0].toUpperCase()+p.slice(1)}</span><span class="p-check"><i data-lucide="check" style="width:11px"></i></span></button>`).join(''):`<div class="platform-empty">No connected social accounts. Connect one in Settings.</div>`;document.querySelectorAll('#platformChoices .platform-card').forEach(b=>b.onclick=()=>{b.classList.toggle('on');renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility()});$('platformList').innerHTML=list.length?list.map(p=>`<div class="platform-row"><div class="platform-logo ${p}">${logo(p)}</div><div><strong>${p[0].toUpperCase()+p.slice(1)}</strong><small>Connected</small></div><span class="connected-dot"></span></div>`).join(''):`<div class="empty"><div class="empty-icon"><i data-lucide="link-2-off"></i></div><p>Connect a social account in Settings.</p></div>`;lucide.createIcons()}
+function renderPlatforms(){const list=connectedPlatforms();$('platformChoices').innerHTML=list.length?list.map(p=>`<button type="button" class="platform-card" data-platform="${p}"><div class="p-icon ${p}">${logo(p)}</div><span class="p-name">${p[0].toUpperCase()+p.slice(1)}</span><span class="p-check"><i data-lucide="check" style="width:11px"></i></span></button>`).join(''):`<div class="platform-empty">No connected social accounts. Connect one in Settings.</div>`;document.querySelectorAll('#platformChoices .platform-card').forEach(b=>b.onclick=()=>{b.classList.toggle('on');renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();renderCustomizeList()});$('platformList').innerHTML=list.length?list.map(p=>`<div class="platform-row"><div class="platform-logo ${p}">${logo(p)}</div><div><strong>${p[0].toUpperCase()+p.slice(1)}</strong><small>Connected</small></div><span class="connected-dot"></span></div>`).join(''):`<div class="empty"><div class="empty-icon"><i data-lucide="link-2-off"></i></div><p>Connect a social account in Settings.</p></div>`;lucide.createIcons()}
 function thumb(x){if(x.mediaUrl)return `<img src="${esc(x.mediaUrl)}" alt="">`;return `<i data-lucide="${x.mediaType==='video'?'video':'file-text'}"></i>`}
 function renderContent(){
   if(!items.length){$('contentList').innerHTML='<div class="empty"><div class="empty-icon"><i data-lucide="notebook-pen"></i></div><p>No content yet. Create your first post.</p></div>';lucide.createIcons();return}
@@ -314,50 +358,89 @@ async function deleteContent(id){
   if(!confirm('Delete this post from Creovah and the connected platform?'))return;
   try{const r=await fetch('/api/content/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+t}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'The post could not be deleted.');items=items.filter(x=>x._id!==id);renderContent();updateStats();notice('Post deleted',d.message||'The post was removed.','success')}catch(e){notice('Delete failed',e.message,'failure')}
 }
+function resetCustomize(){customizeChoices={};Object.values(overrideContent).forEach(o=>o.filePreviews?.forEach(p=>URL.revokeObjectURL(p.url)));overrideContent={}}
 function populateModal(item,mode){
-  composerMode=mode;editingId=item?._id||null;originalAltText=item?.mediaAltText||'';resetMedia(false);$('body').value=item?.body||'';$('altText').value=item?.mediaAltText||'';$('count').textContent=$('body').value.length;$('formError').textContent='';
+  composerMode=mode;editingId=item?._id||null;originalAltText=item?.mediaAltText||'';resetMedia(false);resetCustomize();$('body').value=item?.body||'';$('altText').value=item?.mediaAltText||'';$('count').textContent=$('body').value.length;$('formError').textContent='';
   document.querySelectorAll('#platformChoices .platform-card').forEach(x=>x.classList.toggle('on',(item?.platforms||[]).includes(x.dataset.platform)));
   if(!item){const list=connectedPlatforms();if(list.length)document.querySelector(`#platformChoices .platform-card[data-platform="${list[0]}"]`)?.classList.add('on')}
   const now=new Date(Date.now()+60000);$('scheduleDate').min=new Date().toISOString().slice(0,10);$('scheduleDate').value=item?.scheduledFor?new Date(item.scheduledFor).toISOString().slice(0,10):now.toISOString().slice(0,10);$('scheduleTime').value=item?.scheduledFor?new Date(item.scheduledFor).toTimeString().slice(0,5):now.toTimeString().slice(0,5);
   const scheduleMode=mode==='schedule'||mode==='scheduled-edit';
+  const customizeMode=mode==='customize';
   const editMode=mode==='edit'||mode==='scheduled-edit';
   $('scheduleRow').classList.toggle('show',scheduleMode);
   const composerEl=document.getElementById('modal').querySelector('.composer');
-  composerEl.classList.remove('flavor-publish','flavor-schedule');
-  composerEl.classList.add(scheduleMode?'flavor-schedule':'flavor-publish');
+  composerEl.classList.remove('flavor-publish','flavor-schedule','flavor-customize');
+  composerEl.classList.add(customizeMode?'flavor-customize':scheduleMode?'flavor-schedule':'flavor-publish');
   $('publishBtn').querySelector('.publish-label').innerHTML=editMode?'<i data-lucide="save"></i>Save changes':scheduleMode?'<i data-lucide="calendar-clock"></i>Schedule':'<i data-lucide="send"></i>Publish now';
   $('modal').classList.add('open');
-  $('composerTitle').textContent=mode==='edit'?'Edit post':mode==='scheduled-edit'?'Edit scheduled post':mode==='schedule'?'Schedule post':'Publish post';
-  $('composerSubtitle').textContent=mode==='edit'?'Change the text. Published media stays as it is.':mode==='scheduled-edit'?'Change the text or scheduled time. Media stays as it is.':mode==='schedule'?'Write the post and choose when it should go out.':'Write your post, then publish it right away or save it for later.';
+  $('composerTitle').textContent=mode==='edit'?'Edit post':mode==='scheduled-edit'?'Edit scheduled post':mode==='schedule'?'Schedule post':customizeMode?'Customize per platform':'Publish post';
+  $('composerSubtitle').textContent=mode==='edit'?'Change the text. Published media stays as it is.':mode==='scheduled-edit'?'Change the text or scheduled time. Media stays as it is.':mode==='schedule'?'Write the post and choose when it should go out.':customizeMode?'Give some platforms their own content, then publish everywhere at once.':'Write your post, then publish it right away or save it for later.';
+  $('contentHeading').textContent=customizeMode?'Default content':'Write your post';
+  $('contentSubcopy').textContent=customizeMode?'This is what platforms without custom content will post.':'Add a caption and, if you like, a photo or video.';
   $('reviewHeading').textContent=scheduleMode?'Review and schedule':'Review and publish';
   $('reviewSubcopy').textContent=scheduleMode?'Check how this looks on each platform, then set the time.':'Check how this looks on each platform, then send it.';
   $('mediaFile').disabled=editMode;$('mediaFile').closest('.upload').style.display=editMode?'none':'';$('removeMedia').style.display=editMode?'none':'';
   const note=$('mediaEditNote');if(note) {note.textContent=mode==='scheduled-edit'?'Media is fixed for scheduled LinkedIn posts. Create a new post to use different media.':'Published LinkedIn media cannot be changed here. Create a new post if you want to use different media.';note.style.display=editMode?'block':'none'}
-  renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();goToStep(0);lucide.createIcons();
+  renderPreviewTabs();updatePreview();updateTiktokSettingsVisibility();renderCustomizeList();buildStepRail();goToStep(0);lucide.createIcons();
 }
-const TOTAL_STEPS=3;let currentStep=0;
+function activeStepKeys(){
+  const base=['platforms'];
+  if(composerMode==='customize')base.push('customize');
+  base.push('content');
+  if(composerMode==='customize'&&Object.values(customizeChoices).some(c=>c&&(c.media||c.body)))base.push('overrides');
+  base.push('review');
+  return base;
+}
+const STEP_LABEL={platforms:'Platforms',customize:'Customize',content:'Content',overrides:'Per-platform',review:'Review'};
+let currentStep=0;
+function buildStepRail(){
+  const keys=activeStepKeys();
+  $('composerSteps').innerHTML=keys.map((k,i)=>`<button type="button" class="c-step" data-step="${i}"><span class="c-step-dot">${i+1}</span><span class="c-step-label">${STEP_LABEL[k]}</span></button>`).join('');
+  document.querySelectorAll('.c-step').forEach(s=>s.onclick=()=>{
+    const target=Number(s.dataset.step);
+    if(target>currentStep&&!validateStep(currentStep))return;
+    leaveStepGuard();
+    goToStep(target);
+  });
+}
 function goToStep(n){
-  currentStep=Math.max(0,Math.min(TOTAL_STEPS-1,n));
-  document.querySelectorAll('.c-panel').forEach(p=>p.classList.toggle('active',Number(p.dataset.panel)===currentStep));
+  const keys=activeStepKeys();
+  currentStep=Math.max(0,Math.min(keys.length-1,n));
+  const activeKey=keys[currentStep];
+  document.querySelectorAll('.c-panel').forEach(p=>p.classList.toggle('active',p.dataset.stepKey===activeKey));
   document.querySelectorAll('.c-step').forEach(s=>{const idx=Number(s.dataset.step);s.classList.toggle('active',idx===currentStep);s.classList.toggle('done',idx<currentStep)});
   $('stepBack').style.display=currentStep>0?'inline-flex':'none';
-  const onLastStep=currentStep===TOTAL_STEPS-1;
+  const onLastStep=currentStep===keys.length-1;
   const editMode=composerMode==='edit'||composerMode==='scheduled-edit';
   $('stepNext').style.display=onLastStep?'none':'inline-flex';
   $('draftBtn').style.display=(onLastStep&&!editMode)?'inline-flex':'none';
   $('publishBtn').style.display=onLastStep?'inline-flex':'none';
   $('formError').textContent='';
+  if(activeKey==='overrides')renderOverrideEditors();
   if(onLastStep)renderReviewSummary();
   $('composerPanels')?.scrollTo?.(0,0);
 }
 function validateStep(step){
-  if(step===0){const platforms=selectedPlatforms();if(!platforms.length){showError('Platform required','Choose at least one connected platform.');return false}}
-  if(step===1){if(!$('body').value.trim()){showError('Post is empty','Write something for your post.');return false}}
+  const keys=activeStepKeys();const key=keys[step];
+  if(key==='platforms'){const platforms=selectedPlatforms();if(!platforms.length){showError('Platform required','Choose at least one connected platform.');return false}}
+  if(key==='content'){if(!$('body').value.trim()){showError('Post is empty','Write something for your post.');return false}}
+  if(key==='overrides'){
+    for(const p of Object.keys(customizeChoices)){
+      const c=customizeChoices[p];if(!c||(!c.media&&!c.body))continue;
+      const o=overrideContent[p]||{};
+      if(c.body&&!(o.body||'').trim()){showError('Missing custom content',`Write the custom caption for ${PLATFORM_LABEL[p]||p}, or turn off body customization for it.`);return false}
+      if(c.media&&!(o.files&&o.files.length)){showError('Missing custom media',`Add the custom media for ${PLATFORM_LABEL[p]||p}, or turn off media customization for it.`);return false}
+    }
+  }
   return true;
 }
-$('stepNext').onclick=()=>{if(!validateStep(currentStep))return;goToStep(currentStep+1)};
-$('stepBack').onclick=()=>goToStep(currentStep-1);
-document.querySelectorAll('.c-step').forEach(s=>s.onclick=()=>{const target=Number(s.dataset.step);if(target>currentStep&&!validateStep(currentStep))return;goToStep(target)});
+function leaveStepGuard(){if(activeStepKeys()[currentStep]==='customize')buildStepRail()}
+$('stepNext').onclick=()=>{
+  if(!validateStep(currentStep))return;
+  leaveStepGuard();
+  goToStep(currentStep+1);
+};
+$('stepBack').onclick=()=>{leaveStepGuard();goToStep(currentStep-1)};
 function continueDraft(id){const item=items.find(x=>x._id===id);if(item)populateModal(item,'draft')}
 async function editContent(id){const item=items.find(x=>x._id===id);if(!item)return;const mode=item.status==='scheduled'?'scheduled-edit':'edit';populateModal(item,mode);if(item.mediaAssets?.length||item.mediaUrn){$('mediaPreview').classList.add('show');$('mediaImg').style.display='none';$('mediaVideo').style.display='none';$('mediaStatus').textContent='Loading existing media…';try{const r=await fetch('/api/content/'+id+'/media-preview',{headers:{Authorization:'Bearer '+t}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Existing media is not available yet.');if(d.mediaType==='video'){$('mediaVideo').src=d.url;$('mediaVideo').style.display='block'}else{$('mediaImg').src=d.url;$('mediaImg').style.display='block'}$('mediaStatus').textContent='Existing media · this media cannot be changed here.'}catch(e){$('mediaPreview').classList.remove('show');$('mediaStatus').textContent=e.message||'Existing media could not be loaded.'}}}
 
@@ -401,11 +484,16 @@ function tiktokSettingsPayload(){
 const PLATFORM_LABEL={linkedin:'LinkedIn',facebook:'Facebook',instagram:'Instagram',x:'X',tiktok:'TikTok'};
 const PLATFORM_ICON_BG={linkedin:'#0a66c2',facebook:'#1877f2',instagram:'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',x:'#111',tiktok:'#111'};
 function renderPreviewTabs(){const list=selectedPlatforms();if(!list.length){$('previewSwitch').innerHTML='<span style="font-size:10px;color:#9a9289">Select a platform to preview it</span>';selectedPreviewPlatform=null;$('postPreview').innerHTML='';return}if(!selectedPreviewPlatform||!list.includes(selectedPreviewPlatform))selectedPreviewPlatform=list[0];$('previewSwitch').innerHTML=list.map(p=>`<button type="button" class="${p===selectedPreviewPlatform?'on':''}" data-preview="${p}"><span class="ps-icon" style="background:${PLATFORM_ICON_BG[p]}">${logo(p)}</span>Preview ${PLATFORM_LABEL[p]}</button>`).join('');document.querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>{selectedPreviewPlatform=b.dataset.preview;renderPreviewTabs();updatePreview()});lucide.createIcons()}
-function currentMediaItems(){
+function currentMediaItems(platform){
+  if(platform&&customizeChoices[platform]?.media&&overrideContent[platform]?.filePreviews?.length)return overrideContent[platform].filePreviews;
   if(selectedFilePreviews.length)return selectedFilePreviews;
   if($('mediaVideo').style.display!=='none'&&$('mediaVideo').src)return [{url:$('mediaVideo').src,type:'video'}];
   if($('mediaImg').style.display!=='none'&&$('mediaImg').src)return [{url:$('mediaImg').src,type:'image'}];
   return [];
+}
+function currentBody(platform){
+  if(platform&&customizeChoices[platform]?.body)return (overrideContent[platform]?.body||'').trim()||'Your custom caption will appear here.';
+  return $('body').value.trim()||'Your caption will appear here.';
 }
 function mediaMarkup(items,tag){
   if(!items.length)return '';
@@ -416,9 +504,9 @@ function mediaMarkup(items,tag){
 function updatePreview(){
   const p=selectedPreviewPlatform;const box=$('postPreview');
   if(!p){box.innerHTML='';return}
-  const body=$('body').value.trim()||'Your caption will appear here.';
+  const body=currentBody(p);
   const name=user?.connections?.[p]?.name||user?.name||'Your profile';
-  const media=currentMediaItems();
+  const media=currentMediaItems(p);
   let html='';
   if(p==='linkedin'){
     html=`<div class="pv-linkedin"><div class="pv-head"><div class="pv-avatar"><i data-lucide="user"></i></div><div><div class="pv-name">${esc(name)}</div><div class="pv-sub">Now · <i data-lucide="globe-2" style="width:10px"></i></div></div></div><div class="pv-body">${esc(body)}</div><div class="pv-media-wrap">${mediaMarkup(media,'pv-media')||''}</div><div class="pv-actions"><span><i data-lucide="thumbs-up" style="width:14px"></i>Like</span><span><i data-lucide="message-circle" style="width:14px"></i>Comment</span><span><i data-lucide="repeat-2" style="width:14px"></i>Repost</span><span><i data-lucide="send" style="width:14px"></i>Send</span></div></div>`;
@@ -437,12 +525,69 @@ function renderReviewSummary(){
   const list=selectedPlatforms();const media=currentMediaItems();
   const platformsTxt=list.length?list.map(p=>PLATFORM_LABEL[p]).join(', '):'No platform selected';
   const mediaTxt=media.length?(media[0].type==='video'?'1 video attached':`${media.length} photo${media.length>1?'s':''} attached`):'No media attached';
-  $('reviewSummary').innerHTML=`<div class="rs-icon"><i data-lucide="send-horizontal"></i></div><div>Posting to <b>${esc(platformsTxt)}</b><span class="rs-sep"> · </span>${esc(mediaTxt)}</div>`;
+  const customCount=Object.values(customizeChoices).filter(c=>c&&(c.media||c.body)).length;
+  const customTxt=customCount?`<span class="rs-sep"> · </span>${customCount} platform${customCount>1?'s':''} with custom content`:'';
+  $('reviewSummary').innerHTML=`<div class="rs-icon"><i data-lucide="send-horizontal"></i></div><div>Posting to <b>${esc(platformsTxt)}</b><span class="rs-sep"> · </span>${esc(mediaTxt)}${customTxt}</div>`;
+  lucide.createIcons();
+}
+function renderCustomizeList(){
+  const list=$('customizeList');if(!list)return;
+  const platforms=selectedPlatforms();
+  if(!platforms.length){list.innerHTML='<div class="customize-empty">Choose platforms on the previous step first.</div>';return}
+  list.innerHTML=platforms.map(p=>{
+    const c=customizeChoices[p]||{};const on=Boolean(c.media||c.body);
+    return `<div class="customize-row ${on?'on':''}" data-crow="${p}">
+      <div class="customize-row-head"><div class="p-icon ${p}">${logo(p)}</div><strong>${PLATFORM_LABEL[p]}</strong><label class="switch"><input type="checkbox" data-ctoggle="${p}" ${on?'checked':''}><span class="switch-track"></span></label></div>
+      <div class="customize-options">
+        <button type="button" class="customize-opt ${c.media?'on':''}" data-copt="${p}:media">Media only</button>
+        <button type="button" class="customize-opt ${c.body?'on':''}" data-copt="${p}:body">Text only</button>
+        <button type="button" class="customize-opt ${c.media&&c.body?'on':''}" data-copt="${p}:both">Both</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('[data-ctoggle]').forEach(el=>el.onchange=()=>{
+    const p=el.dataset.ctoggle;
+    if(el.checked){customizeChoices[p]=customizeChoices[p]&&(customizeChoices[p].media||customizeChoices[p].body)?customizeChoices[p]:{media:true,body:false};if(!overrideContent[p])overrideContent[p]={body:'',files:[],filePreviews:[]}}
+    else{delete customizeChoices[p]}
+    renderCustomizeList();
+  });
+  list.querySelectorAll('[data-copt]').forEach(el=>el.onclick=()=>{
+    const [p,kind]=el.dataset.copt.split(':');
+    customizeChoices[p]=kind==='both'?{media:true,body:true}:kind==='media'?{media:true,body:false}:{media:false,body:true};
+    if(!overrideContent[p])overrideContent[p]={body:'',files:[],filePreviews:[]};
+    renderCustomizeList();
+  });
+  lucide.createIcons();
+}
+function overrideFileInputId(p){return 'overrideFile_'+p}
+function renderOverrideEditors(){
+  const box=$('overrideEditors');if(!box)return;
+  const active=Object.keys(customizeChoices).filter(p=>customizeChoices[p]&&(customizeChoices[p].media||customizeChoices[p].body));
+  if(!active.length){box.innerHTML='<div class="customize-empty">No platforms are set to customize yet.</div>';return}
+  box.innerHTML=active.map(p=>{
+    const c=customizeChoices[p];const o=overrideContent[p]||{body:'',files:[],filePreviews:[]};
+    const bodyField=c.body?`<div class="field" style="margin-bottom:11px"><label class="field-label">Custom caption for ${PLATFORM_LABEL[p]}</label><textarea data-obody="${p}" placeholder="Write the ${PLATFORM_LABEL[p]}-specific caption...">${esc(o.body||'')}</textarea></div>`:'';
+    const mediaField=c.media?`<div class="field" style="margin-bottom:0"><label class="field-label">Custom media for ${PLATFORM_LABEL[p]}</label><label class="override-upload" for="${overrideFileInputId(p)}"><i data-lucide="image-plus" style="width:15px"></i>Add photo or video<input id="${overrideFileInputId(p)}" type="file" data-ofile="${p}" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" multiple hidden></label><div class="override-media-preview ${o.filePreviews?.length?'show':''}" data-opreview="${p}">${o.filePreviews?.length?mediaMarkup(o.filePreviews,'pv-media'):''}</div></div>`:'';
+    return `<div class="override-card"><div class="override-card-head"><div class="p-icon ${p}">${logo(p)}</div><strong>${PLATFORM_LABEL[p]}</strong></div>${bodyField}${mediaField}</div>`;
+  }).join('');
+  box.querySelectorAll('[data-obody]').forEach(el=>el.oninput=()=>{overrideContent[el.dataset.obody]=overrideContent[el.dataset.obody]||{body:'',files:[],filePreviews:[]};overrideContent[el.dataset.obody].body=el.value;if(selectedPreviewPlatform===el.dataset.obody)updatePreview()});
+  box.querySelectorAll('[data-ofile]').forEach(el=>el.onchange=async()=>{
+    const p=el.dataset.ofile;const files=Array.from(el.files||[]);if(!files.length)return;
+    for(const f of files){if(!/^(image\/(jpeg|png|gif|webp)|video\/(mp4|quicktime|webm))$/.test(f.type))return notice('Unsupported media','Choose JPG, PNG, WEBP, GIF, MP4, MOV or WEBM files.','failure');if(f.size>200*1024*1024)return notice('File too large','Keep each media file under 200 MB.','failure')}
+    if(files.some(f=>f.type.startsWith('video/'))&&files.length>1)return notice('One video at a time','Use one video, or multiple images instead.','failure');
+    if(files.some(f=>f.type.startsWith('video/'))&&files.some(f=>f.type.startsWith('image/')))return notice('Choose one media type','Use either photos or one video.','failure');
+    overrideContent[p]=overrideContent[p]||{body:'',files:[],filePreviews:[]};
+    overrideContent[p].filePreviews?.forEach(pr=>URL.revokeObjectURL(pr.url));
+    overrideContent[p].files=files;
+    overrideContent[p].filePreviews=files.map(f=>({url:URL.createObjectURL(f),type:f.type.startsWith('video/')?'video':'image'}));
+    renderOverrideEditors();
+    if(selectedPreviewPlatform===p)updatePreview();
+  });
   lucide.createIcons();
 }
 function openModal(mode='draft'){populateModal(null,mode)}
-function closeModal(){if($('publishBtn').classList.contains('is-loading'))return;$('modal').classList.remove('open');editingId=null;composerMode='draft';resetMedia();$('tiktokSettingsField').style.display='none';$('tiktokBrandedContent').checked=false;$('tiktokAigc').checked=false}
-$('publishModalBtn').onclick=()=>openModal('publish');$('scheduleModalBtn').onclick=()=>openModal('schedule');$('quickDraft').onclick=()=>openModal('publish');$('quickSchedule').onclick=()=>openModal('schedule');$('close').onclick=closeModal;$('cancel').onclick=closeModal;
+function closeModal(){if($('publishBtn').classList.contains('is-loading'))return;$('modal').classList.remove('open');editingId=null;composerMode='draft';resetMedia();resetCustomize();$('tiktokSettingsField').style.display='none';$('tiktokBrandedContent').checked=false;$('tiktokAigc').checked=false}
+$('publishModalBtn').onclick=()=>openModal('publish');$('scheduleModalBtn').onclick=()=>openModal('schedule');$('customizeModalBtn').onclick=()=>openModal('customize');$('quickDraft').onclick=()=>openModal('publish');$('quickSchedule').onclick=()=>openModal('schedule');$('close').onclick=closeModal;$('cancel').onclick=closeModal;
 $('body').oninput=()=>{$('count').textContent=$('body').value.length;updatePreview()};
 async function prepareTikTokImage(file){
   if(file.type==='image/jpeg'||file.type==='image/webp')return file;
@@ -465,6 +610,24 @@ async function uploadMedia(){
     clearInterval(timer); bar.style.width='100%';pct.textContent='100%';$('uploadBar').style.width='100%';title.textContent='Media saved';msg.textContent='Your media is ready for drafts, scheduling and publishing.';
     uploadedMedia=d.assets||[]; setTimeout(()=>status.classList.remove('show','busy'),900); return uploadedMedia;
   }catch(e){clearInterval(timer);bar.style.width='0';pct.textContent='0%';$('uploadBar').style.width='0';status.classList.remove('busy');title.textContent='Media save failed';msg.textContent=e.message||'The media could not be saved.';throw e}
+}
+async function uploadFilesFor(files){
+  if(!files||!files.length)return [];
+  const fd=new FormData(); files.forEach(f=>fd.append('media',f));
+  const r=await fetch('/api/media/upload',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});
+  const d=await r.json().catch(()=>({})); if(!r.ok)throw new Error(d.message||'Custom media could not be saved.');
+  return d.assets||[];
+}
+async function buildPerPlatformOverrides(){
+  const result={};
+  for(const p of Object.keys(customizeChoices)){
+    const c=customizeChoices[p];if(!c||(!c.media&&!c.body))continue;
+    const o=overrideContent[p]||{};const entry={};
+    if(c.body)entry.body=(o.body||'').trim();
+    if(c.media&&o.files?.length)entry.mediaAssets=await uploadFilesFor(o.files);
+    if(Object.keys(entry).length)result[p]=entry;
+  }
+  return result;
 }
 function clientValidate(platforms,action){
   const errors=[]; const body=$('body').value.trim(); const files=selectedFiles||[]; const old=editingId?items.find(x=>x._id===editingId):null; const hasExisting=!!(old?.mediaAssets?.length||old?.mediaUrl||old?.mediaUrn); const hasMedia=files.length>0||hasExisting;
@@ -513,6 +676,16 @@ async function submitContent(action){
       if(!ts.privacyLevel){if(showValidation([{platform:'tiktok',message:'Choose who can view this TikTok post before publishing.'}]))return}
       if(ts.isBrandedContent&&ts.privacyLevel==='SELF_ONLY'){if(showValidation([{platform:'tiktok',message:'Branded content cannot be set to private on TikTok. Choose a different privacy setting or turn off branded content.'}]))return}
     }
+    if(composerMode==='customize'){
+      const missing=[];
+      for(const p of Object.keys(customizeChoices)){
+        const c=customizeChoices[p];if(!c||(!c.media&&!c.body))continue;
+        const o=overrideContent[p]||{};
+        if(c.body&&!(o.body||'').trim())missing.push({platform:p,message:`Write the custom caption for ${PLATFORM_LABEL[p]||p}, or turn off body customization for it.`});
+        if(c.media&&!(o.files&&o.files.length))missing.push({platform:p,message:`Add the custom media for ${PLATFORM_LABEL[p]||p}, or turn off media customization for it.`});
+      }
+      if(showValidation(missing))return;
+    }
   }
   if(action==='edit'||action==='scheduled-edit'){
     const editingItem=items.find(x=>x._id===editingId); const publishedTikTok=action==='edit'&&editingItem?.status==='published'&&editingItem?.platforms?.includes('tiktok')&&editingItem?.externalPosts?.tiktok;
@@ -526,6 +699,7 @@ async function submitContent(action){
     else if(editingId){const existing=items.find(x=>x._id===editingId);mediaAssets=existing?.mediaAssets||[]}
     const payload={body:$('body').value.trim(),platforms,status:action==='schedule'?'scheduled':'draft',publishNow:action==='publish',scheduledFor:action==='schedule'?scheduledDate:null,mediaAssets,mediaAltText:$('altText').value.trim()};
     if(platforms.includes('tiktok'))payload.tiktokSettings=tiktokSettingsPayload();
+    if(composerMode==='customize'&&(action==='publish'||action==='schedule'))payload.perPlatformOverrides=await buildPerPlatformOverrides();
     if(editingId&&action==='draft'){
       const r=await fetch('/api/content/'+editingId,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({body:payload.body,mediaAssets})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Unable to save the draft.');const i=items.findIndex(x=>x._id===editingId);if(i>=0)items[i]=d.item;renderContent();closeModal();notice('Draft saved','Your changes were saved.','success');return;
     }

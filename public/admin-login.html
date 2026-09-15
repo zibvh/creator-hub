@@ -4,18 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Admin Sign In — Creovah</title>
+<link rel="icon" href="/assets/favicon-256.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/creovah-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"DM Sans",system-ui,sans-serif;background:#f4f0ea;color:#201b16}body{display:grid;place-items:center;padding:24px}.shell{width:min(440px,100%)}.brand{font:600 20px "Playfair Display",serif;margin-bottom:34px}.card{background:#fff;border:1px solid #e5ded4;border-radius:22px;padding:30px;box-shadow:0 18px 55px rgba(48,37,24,.09)}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:700;color:#9b6b3d;margin-bottom:8px}.card h1{font:600 34px "Playfair Display",serif;margin:0 0 8px}.sub{font-size:14px;color:#776f66;line-height:1.55;margin:0 0 26px}.field{margin-bottom:16px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}.input{width:100%;height:48px;border:1px solid #dcd4ca;border-radius:11px;background:#fbfaf8;padding:0 14px;font:500 14px inherit;outline:none}.input:focus{border-color:#9b6b3d;box-shadow:0 0 0 3px rgba(155,107,61,.12)}.password{position:relative}.password .input{padding-right:48px}.iconbtn{position:absolute;right:5px;top:5px;width:38px;height:38px;border:0;background:transparent;border-radius:8px;display:grid;place-items:center;color:#71685e;cursor:pointer}.submit{width:100%;height:50px;border:0;border-radius:11px;background:#201b16;color:#fff;font:700 14px inherit;cursor:pointer;margin-top:6px}.submit:disabled{opacity:.55;cursor:wait}.error{min-height:20px;margin:12px 0 0;color:#a33d35;font-size:12px;line-height:1.45}.back{display:inline-flex;align-items:center;gap:7px;margin-top:20px;color:#756d64;text-decoration:none;font-size:12px;font-weight:600}.back svg{width:15px;height:15px}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"DM Sans",system-ui,sans-serif;background:#f4f0ea;color:#201b16}body{display:grid;place-items:center;padding:24px}.shell{width:min(440px,100%)}.brand{font:600 20px "Playfair Display",serif;margin-bottom:34px;display:flex;align-items:center;gap:9px}.brand img{width:28px;height:28px;filter:drop-shadow(0 5px 12px rgba(155,107,61,.35))}.card{background:#fff;border:1px solid #e5ded4;border-radius:22px;padding:30px;box-shadow:0 18px 55px rgba(48,37,24,.09)}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:700;color:#9b6b3d;margin-bottom:8px}.card h1{font:600 34px "Playfair Display",serif;margin:0 0 8px}.sub{font-size:14px;color:#776f66;line-height:1.55;margin:0 0 26px}.field{margin-bottom:16px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}.input{width:100%;height:48px;border:1px solid #dcd4ca;border-radius:11px;background:#fbfaf8;padding:0 14px;font:500 14px inherit;outline:none}.input:focus{border-color:#9b6b3d;box-shadow:0 0 0 3px rgba(155,107,61,.12)}.password{position:relative}.password .input{padding-right:48px}.iconbtn{position:absolute;right:5px;top:5px;width:38px;height:38px;border:0;background:transparent;border-radius:8px;display:grid;place-items:center;color:#71685e;cursor:pointer}.submit{width:100%;height:50px;border:0;border-radius:11px;background:#201b16;color:#fff;font:700 14px inherit;cursor:pointer;margin-top:6px}.submit:disabled{opacity:.55;cursor:wait}.error{min-height:20px;margin:12px 0 0;color:#a33d35;font-size:12px;line-height:1.45}.back{display:inline-flex;align-items:center;gap:7px;margin-top:20px;color:#756d64;text-decoration:none;font-size:12px;font-weight:600}.back svg{width:15px;height:15px}
 @media(max-width:520px){body{padding:16px}.card{padding:22px;border-radius:18px}.card h1{font-size:30px}.brand{margin-bottom:24px}}
 </style>
 </head>
 <body>
 <main class="shell">
-  <div class="brand">creovah</div>
+  <div class="brand"><img src="/assets/creovah-mark.png" alt="">creovah</div>
   <section class="card">
     <div class="eyebrow">Administration</div>
     <h1>Admin sign in</h1>

@@ -1,9 +1,9 @@
 *{box-sizing:border-box}
 body{margin:0;background:#faf7f2;color:#1c1712;font-family:"Inter",sans-serif}
 .auth-shell{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 20px}
-.brand{align-self:flex-start;font:700 24px "Fraunces",serif;letter-spacing:-0.5px;text-decoration:none;color:#1c1712}
+.brand{align-self:flex-start;font:700 24px "Fraunces",serif;letter-spacing:-0.5px;text-decoration:none;color:#1c1712;display:flex;align-items:center;gap:9px}.brand img{width:30px;height:30px;filter:drop-shadow(0 6px 14px rgba(232,98,45,.3))}
 .auth-card{width:min(430px,100%);margin:auto;background:#fff;border:1px solid #e6ddd0;border-radius:20px;padding:38px;box-shadow:0 24px 60px -20px rgba(28,23,18,.15)}
-.auth-mark{width:42px;height:42px;border-radius:12px;background:#fdeee6;color:#e8622d;display:grid;place-items:center;margin-bottom:22px}
+.auth-mark{width:52px;height:52px;border-radius:14px;background:#fdeee6;color:#e8622d;display:grid;place-items:center;margin-bottom:22px;box-shadow:0 10px 24px rgba(232,98,45,.18)}.auth-mark img{width:34px;height:34px}
 .auth-mark svg{width:19px}
 .auth-card h1{font:500 32px "Fraunces",serif;letter-spacing:-1px;margin:0 0 8px}
 .auth-card>p{color:#6b5a48;font-size:14px;margin:0 0 30px}
